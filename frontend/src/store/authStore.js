@@ -1,157 +1,126 @@
+// src/store/authStore.js
+
 import {create} from 'zustand';
 import {persist, createJSONStorage} from 'zustand/middleware';
-import {post} from '../utils/api';
-import {API_ENDPOINTS} from '../utils/constants';
+import axios from 'axios'; // Import axios
+
+// Your Flask backend URL
+const API_URL = 'http://127.0.0.1:5001/api/auth';
+
+// Define the initial (logged-out) state
+const initialState = {
+    user: null,
+    token: null,
+    isAuthenticated: false,
+    isLoading: false,
+    error: null,
+};
 
 const useAuthStore = create(
     persist(
-        (set) => ({
-            // State
-            user: null,
-            token: null,
-            isAuthenticated: false,
-            isLoading: false,
-            error: null,
+        (set, get) => ({
+            ...initialState,
 
-        // Actions
-        setUser: (user) => set({
-            user,
-            isAuthenticated: !!user,
-            error: null
+            /**
+             * ### LOGIN ACTION ###
+             * Fetches a token from the backend and updates the state.
+             */
+            login: async (email, password) => {
+                set({isLoading: true, error: null});
+                try {
+                    // 1. Call your Flask API
+                    const response = await axios.post(`${API_URL}/login`, {
+                        email,
+                        password,
+                    });
+
+                    const {user, token} = response.data;
+
+                    // 2. On success, update the store
+                    set({
+                        user: user,
+                        token: token,
+                        isAuthenticated: true,
+                        isLoading: false,
+                        error: null,
+                    });
+
+                    return response.data;
+
+                } catch (error) {
+                    // 3. Handle errors (e.g., 401 Invalid Credentials)
+                    const errorMessage = error.response?.data?.error || error.message || 'Login failed';
+
+                    set({
+                        ...initialState, // Reset to logged-out state on failure
+                        isLoading: false,
+                        error: errorMessage,
+                    });
+
+                    // 4. Re-throw the error so the LoginPage component can show a toast
+                    throw new Error(errorMessage);
+                }
+            },
+
+            /**
+             * ### SIGNUP ACTION ###
+             * Creates a new user.
+             */
+            signup: async (name, email, password) => {
+                set({isLoading: true, error: null});
+                try {
+                    const response = await axios.post(`${API_URL}/signup`, {
+                        name,
+                        email,
+                        password,
+                    });
+
+                    const {user, token, message} = response.data;
+
+                    // If backend auto-logs in user (returns token), update state
+                    if (token && user) {
+                        set({
+                            isAuthenticated: true,
+                            user: user,
+                            token: token,
+                            isLoading: false,
+                            error: null,
+                        });
+                    } else {
+                        // Otherwise, just stop loading (user may need to confirm email)
+                        set({isLoading: false});
+                    }
+
+                    return response.data; // Return data for component to handle
+
+                } catch (error) {
+                    const errorMessage = error.response?.data?.error || error.message || 'Signup failed';
+                    set({isLoading: false, error: errorMessage});
+                    throw new Error(errorMessage);
+                }
+            },
+
+            /**
+             * ### LOGOUT ACTION ###
+             * Resets state. The 'persist' middleware will auto-update localStorage.
+             */
+            logout: () => {
+                set(initialState); // Reset to the initial logged-out state
+            },
+
+            clearError: () => set({error: null}),
         }),
-
-        setToken: (token) => set({token}),
-
-        setLoading: (isLoading) => set({isLoading}),
-
-        setError: (error) => set({error}),
-
-        login: async (email, password) => {
-            set({isLoading: true, error: null});
-            try {
-                // DEMO MODE: Simulate successful login
-                // TODO: Replace with actual API call when backend is ready
-                await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
-
-                const mockUser = {
-                    id: 'demo-user-123',
-                    name: email.split('@')[0],
-                    email: email,
-                    createdAt: new Date().toISOString()
-                };
-
-                const mockToken = 'demo-token-' + Math.random().toString(36).substr(2, 9);
-
-                set({
-                    user: mockUser,
-                    token: mockToken,
-                    isAuthenticated: true,
-                    isLoading: false,
-                    error: null
-                });
-
-                return {user: mockUser, token: mockToken};
-
-                /* PRODUCTION CODE - Uncomment when backend is ready:
-                const data = await post(API_ENDPOINTS.AUTH.LOGIN, {
-                    email,
-                    password
-                });
-
-                set({
-                    user: data.user,
-                    token: data.token,
-                    isAuthenticated: true,
-                    isLoading: false,
-                    error: null
-                });
-
-                return data;
-                */
-            } catch (error) {
-                set({
-                    error: error.message,
-                    isLoading: false,
-                    isAuthenticated: false
-                });
-                throw error;
-            }
-        },
-
-        signup: async (email, password, name) => {
-            set({isLoading: true, error: null});
-            try {
-                // DEMO MODE: Simulate successful signup
-                // TODO: Replace with actual API call when backend is ready
-                await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
-
-                const mockUser = {
-                    id: 'demo-user-' + Math.random().toString(36).substr(2, 9),
-                    name: name,
-                    email: email,
-                    createdAt: new Date().toISOString()
-                };
-
-                const mockToken = 'demo-token-' + Math.random().toString(36).substr(2, 9);
-
-                set({
-                    user: mockUser,
-                    token: mockToken,
-                    isAuthenticated: true,
-                    isLoading: false,
-                    error: null
-                });
-
-                return {user: mockUser, token: mockToken};
-
-                /* PRODUCTION CODE - Uncomment when backend is ready:
-                const data = await post(API_ENDPOINTS.AUTH.SIGNUP, {
-                    email,
-                    password,
-                    name
-                });
-
-                set({
-                    user: data.user,
-                    token: data.token,
-                    isAuthenticated: true,
-                    isLoading: false,
-                    error: null
-                });
-
-                return data;
-                */
-            } catch (error) {
-                set({
-                    error: error.message,
-                    isLoading: false,
-                    isAuthenticated: false
-                });
-                throw error;
-            }
-        },
-
-        logout: () => {
-            set({
-                user: null,
-                token: null,
-                isAuthenticated: false,
-                error: null
-            });
-        },
-
-        clearError: () => set({error: null}),
-    }),
-      {
-          name: 'auth-storage',
-          storage: createJSONStorage(() => localStorage),
-          partialize: (state) => ({
-              user: state.user,
-              token: state.token,
-              isAuthenticated: state.isAuthenticated
-          }),
-      }
-  )
+        {
+            name: 'auth-storage', // The key in localStorage
+            storage: createJSONStorage(() => localStorage),
+            // Only persist these fields to localStorage
+            partialize: (state) => ({
+                user: state.user,
+                token: state.token,
+                isAuthenticated: state.isAuthenticated,
+            }),
+        }
+    )
 );
 
 export default useAuthStore;

@@ -149,7 +149,10 @@ const SignupPage = () => {
         }
 
         try {
-            await signup(formData.email, formData.password, formData.name);
+            // --- THIS IS THE FIX ---
+            // The order now matches authStore.js (name, email, password)
+            await signup(formData.name, formData.email, formData.password);
+
             toast.success('Welcome to CursorGallery!');
             navigate('/dashboard');
         } catch (error) {
