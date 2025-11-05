@@ -1,9 +1,11 @@
 import {create} from 'zustand';
 import {persist, createJSONStorage} from 'zustand/middleware';
+import {post} from '../utils/api';
+import {API_ENDPOINTS} from '../utils/constants';
 
 const useAuthStore = create(
     persist(
-        (set, get) => ({
+        (set) => ({
             // State
             user: null,
             token: null,
@@ -51,17 +53,11 @@ const useAuthStore = create(
                 return {user: mockUser, token: mockToken};
 
                 /* PRODUCTION CODE - Uncomment when backend is ready:
-                const response = await fetch('/api/auth/login', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({email, password}),
+                const data = await post(API_ENDPOINTS.AUTH.LOGIN, {
+                    email,
+                    password
                 });
 
-                if (!response.ok) {
-                    throw new Error('Login failed');
-                }
-
-                const data = await response.json();
                 set({
                     user: data.user,
                     token: data.token,
@@ -109,17 +105,12 @@ const useAuthStore = create(
                 return {user: mockUser, token: mockToken};
 
                 /* PRODUCTION CODE - Uncomment when backend is ready:
-                const response = await fetch('/api/auth/signup', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({email, password, name}),
+                const data = await post(API_ENDPOINTS.AUTH.SIGNUP, {
+                    email,
+                    password,
+                    name
                 });
 
-                if (!response.ok) {
-                    throw new Error('Signup failed');
-                }
-
-                const data = await response.json();
                 set({
                     user: data.user,
                     token: data.token,

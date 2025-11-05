@@ -1,4 +1,6 @@
 import {create} from 'zustand';
+import {get as apiGet, post} from '../utils/api';
+import {API_ENDPOINTS} from '../utils/constants';
 
 const useGalleryStore = create((set, get) => ({
     // State
@@ -44,11 +46,7 @@ const useGalleryStore = create((set, get) => ({
     fetchGalleries: async () => {
         set({isLoading: true, error: null});
         try {
-            // TODO: Replace with actual API call
-            const response = await fetch('/api/galleries');
-            if (!response.ok) throw new Error('Failed to fetch galleries');
-
-            const galleries = await response.json();
+            const galleries = await apiGet(API_ENDPOINTS.GALLERIES.LIST);
             set({galleries, isLoading: false});
             return galleries;
         } catch (error) {
@@ -60,16 +58,7 @@ const useGalleryStore = create((set, get) => ({
     createGallery: async (galleryData) => {
         set({isLoading: true, error: null});
         try {
-            // TODO: Replace with actual API call
-            const response = await fetch('/api/galleries', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(galleryData),
-            });
-
-            if (!response.ok) throw new Error('Failed to create gallery');
-
-            const newGallery = await response.json();
+            const newGallery = await post(API_ENDPOINTS.GALLERIES.CREATE, galleryData);
             set((state) => ({
                 galleries: [newGallery, ...state.galleries],
                 isLoading: false
@@ -87,15 +76,7 @@ const useGalleryStore = create((set, get) => ({
             const formData = new FormData();
             files.forEach(file => formData.append('images', file));
 
-            // TODO: Replace with actual API call with progress tracking
-            const response = await fetch(`/api/galleries/${galleryId}/upload`, {
-                method: 'POST',
-                body: formData,
-            });
-
-            if (!response.ok) throw new Error('Failed to upload images');
-
-            const result = await response.json();
+            const result = await post(API_ENDPOINTS.GALLERIES.UPLOAD(galleryId), formData);
             set({uploadProgress: 100});
             return result;
         } catch (error) {
@@ -107,14 +88,7 @@ const useGalleryStore = create((set, get) => ({
     analyzeGallery: async (galleryId) => {
         set({analysisProgress: 0, error: null});
         try {
-            // TODO: Replace with actual API call
-            const response = await fetch(`/api/galleries/${galleryId}/analyze`, {
-                method: 'POST',
-            });
-
-            if (!response.ok) throw new Error('Failed to analyze gallery');
-
-            const result = await response.json();
+            const result = await post(API_ENDPOINTS.GALLERIES.ANALYZE(galleryId));
 
             // Update gallery with analysis results
             get().updateGallery(galleryId, {
