@@ -101,6 +101,30 @@ const useAuthStore = create(
             },
 
             /**
+             * ### UPDATE USER ACTION ###
+             * Updates the user data in the store
+             */
+            updateUser: (userData) => {
+                const currentUser = get().user;
+                const updatedUser = {
+                    ...currentUser,
+                    ...userData
+                };
+                console.log('Updating user in store:', updatedUser);
+                set({
+                    user: updatedUser
+                });
+                // Force persist
+                localStorage.setItem('auth-storage', JSON.stringify({
+                    state: {
+                        user: updatedUser,
+                        token: get().token,
+                        isAuthenticated: get().isAuthenticated
+                    }
+                }));
+            },
+
+            /**
              * ### LOGOUT ACTION ###
              * Resets state. The 'persist' middleware will auto-update localStorage.
              */

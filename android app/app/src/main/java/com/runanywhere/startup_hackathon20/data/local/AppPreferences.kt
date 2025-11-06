@@ -12,6 +12,8 @@ class AppPreferences(context: Context) {
         private const val KEY_IS_LOGGED_IN = "is_logged_in"
         private const val KEY_USER_EMAIL = "user_email"
         private const val KEY_USER_NAME = "user_name"
+        private const val KEY_USER_ID = "user_id"
+        private const val KEY_AUTH_TOKEN = "auth_token"
         private const val KEY_FIRST_TIME = "first_time"
     }
 
@@ -31,6 +33,14 @@ class AppPreferences(context: Context) {
         get() = prefs.getString(KEY_USER_NAME, null)
         set(value) = prefs.edit().putString(KEY_USER_NAME, value).apply()
 
+    var userId: String?
+        get() = prefs.getString(KEY_USER_ID, null)
+        set(value) = prefs.edit().putString(KEY_USER_ID, value).apply()
+
+    var authToken: String?
+        get() = prefs.getString(KEY_AUTH_TOKEN, null)
+        set(value) = prefs.edit().putString(KEY_AUTH_TOKEN, value).apply()
+
     var isFirstTime: Boolean
         get() = prefs.getBoolean(KEY_FIRST_TIME, true)
         set(value) = prefs.edit().putBoolean(KEY_FIRST_TIME, value).apply()
@@ -39,5 +49,7 @@ class AppPreferences(context: Context) {
         isLoggedIn = false
         userEmail = null
         userName = null
+        userId = null
+        authToken = null
     }
 }

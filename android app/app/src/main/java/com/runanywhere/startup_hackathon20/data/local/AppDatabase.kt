@@ -9,7 +9,7 @@ import com.runanywhere.startup_hackathon20.data.local.entities.GalleryImage
 
 @Database(
     entities = [Gallery::class, GalleryImage::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -25,7 +25,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "cursor_gallery_database"
-                ).build()
+                )
+                    .fallbackToDestructiveMigration()
+                    .build()
                 INSTANCE = instance
                 instance
             }

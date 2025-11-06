@@ -27,6 +27,19 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    // Cloud sync states
+    private val _syncProgress = MutableStateFlow(0)
+    val syncProgress: StateFlow<Int> = _syncProgress.asStateFlow()
+
+    private val _syncMessage = MutableStateFlow<String?>(null)
+    val syncMessage: StateFlow<String?> = _syncMessage.asStateFlow()
+
+    private val _isSyncing = MutableStateFlow(false)
+    val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
+
+    private val _publicLink = MutableStateFlow<String?>(null)
+    val publicLink: StateFlow<String?> = _publicLink.asStateFlow()
+
     init {
         val database = AppDatabase.getDatabase(application)
         repository = GalleryRepository(database.galleryDao(), application.applicationContext)
@@ -48,6 +61,11 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
                 val gallery = repository.getGalleryWithImages(id)
                 _currentGallery.value = gallery
                 _error.value = null
+
+                // Load public link if published
+                if (gallery?.gallery?.isPublished == true && gallery.gallery.cloudId != null) {
+                    _publicLink.value = generatePublicLink(gallery.gallery.cloudId)
+                }
             } catch (e: Exception) {
                 _error.value = e.message
             } finally {
@@ -104,6 +122,69 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
                 _isLoading.value = false
             }
         }
+    }
+
+    // ==================== Cloud Sync Operations ====================
+
+    /**
+     * Sync gallery to cloud (create + upload + publish)
+     */
+    fun syncGalleryToCloud(galleryId: Long, onSuccess: (String) -> Unit) {
+        viewModelScope.launch {
+            _isSyncing.value = true
+            _syncProgress.value = 0
+            _syncMessage.value = "Preparing..."
+            _error.value = null
+
+            try {
+                val result = repository.syncGalleryToCloud(
+                    galleryId = galleryId,
+                    onProgress = { message, progress ->
+                        _syncMessage.value = message
+                        _syncProgress.value = progress
+                    }
+                )
+
+                if (result.isSuccess) {
+                    val cloudId = result.getOrThrow()
+                    _publicLink.value = generatePublicLink(cloudId)
+                    _syncMessage.value = "Gallery published!"
+                    _syncProgress.value = 100
+
+                    // Reload gallery to get updated sync status
+                    loadGallery(galleryId)
+
+                    onSuccess(cloudId)
+                } else {
+                    val error = result.exceptionOrNull()?.message ?: "Sync failed"
+                    _error.value = error
+                    _syncMessage.value = null
+                }
+            } catch (e: Exception) {
+                _error.value = e.message ?: "Sync failed"
+                _syncMessage.value = null
+            } finally {
+                _isSyncing.value = false
+            }
+        }
+    }
+
+    /**
+     * Generate public link for sharing
+     */
+    private fun generatePublicLink(cloudId: String): String {
+        // Using the /g/{id} short URL format
+        return "https://yourdomain.com/g/$cloudId"
+    }
+
+    /**
+     * Reset sync progress
+     */
+    fun resetSyncState() {
+        _syncProgress.value = 0
+        _syncMessage.value = null
+        _publicLink.value = null
+        _error.value = null
     }
 
     fun clearError() {

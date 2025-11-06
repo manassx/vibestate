@@ -138,9 +138,29 @@ const LoginPage = () => {
         }
     };
 
-    const handleGoogleSignIn = () => {
-        toast.error('Google Sign-In coming soon!');
-        // Implement Google OAuth here
+    const handleGoogleSignIn = async () => {
+        try {
+            const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+
+            if (!SUPABASE_URL) {
+                toast.error('Supabase configuration missing');
+                return;
+            }
+
+            const redirectTo = `${window.location.origin}/auth/callback`;
+
+            // Construct proper Supabase OAuth URL
+            const authUrl = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`;
+
+            console.log('Redirecting to Google OAuth:', authUrl);
+
+            // Redirect to Supabase Google OAuth
+            window.location.href = authUrl;
+
+        } catch (error) {
+            console.error('Google sign-in error:', error);
+            toast.error('Failed to sign in with Google');
+        }
     };
 
     return (

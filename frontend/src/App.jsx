@@ -1,7 +1,9 @@
 import {BrowserRouter as Router, Routes, Route, Navigate, useLocation} from 'react-router-dom';
 import {Toaster} from 'react-hot-toast';
+import {useEffect} from 'react';
 import useAuthStore from './store/authStore';
 import {ThemeProvider} from './context/ThemeContext';
+import api from './utils/api';
 
 // Import components (we'll create these next)
 import Navbar from './components/layout/Navbar';
@@ -13,15 +15,35 @@ import Dashboard from './pages/Dashboard';
 import GalleryEditor from './pages/GalleryEditor';
 import PublicGallery from './pages/PublicGallery';
 import CreateGallery from './pages/CreateGallery';
+import Settings from './pages/Settings';
+import AuthCallback from './pages/AuthCallback';
 
 function AppContent() {
-    const {isAuthenticated} = useAuthStore();
+    const {isAuthenticated, token, updateUser} = useAuthStore();
     const location = useLocation();
     const isLandingPage = location.pathname === '/';
-    const isAuthPage = location.pathname === '/login' || location.pathname === '/signup';
+    const isAuthPage = location.pathname === '/login' || location.pathname === '/signup' || location.pathname === '/auth/callback';
     const isGalleryPage = location.pathname.includes('/gallery/') || location.pathname.startsWith('/g/');
     const isPublicGalleryPage = location.pathname.match(/^\/[^\/]+\/[^\/]+$/); // username/gallerySlug pattern
     const isCreatePage = location.pathname === '/create';
+
+    // Fetch fresh user data on mount if authenticated
+    useEffect(() => {
+        const fetchUserData = async () => {
+            if (isAuthenticated && token) {
+                try {
+                    const response = await api.get('/api/auth/me');
+                    if (response && response.user) {
+                        updateUser(response.user);
+                    }
+                } catch (error) {
+                    console.error('Error fetching fresh user data:', error);
+                }
+            }
+        };
+
+        fetchUserData();
+    }, []); // Only run once on mount
 
     // Show navbar only on dashboard
     const showNavbar = !isLandingPage && !isAuthPage && !isGalleryPage && !isPublicGalleryPage && !isCreatePage;
@@ -43,6 +65,9 @@ function AppContent() {
                     isAuthenticated ? <Navigate to="/dashboard" replace/> : <SignupPage/>
                 }/>
 
+                {/* OAuth Callback */}
+                <Route path="/auth/callback" element={<AuthCallback/>}/>
+
                 {/* Public Gallery View - Anyone can view shared galleries */}
                 <Route path="/gallery/:id" element={<PublicGallery/>}/>
                 <Route path="/g/:id" element={<PublicGallery/>}/>
@@ -62,6 +87,11 @@ function AppContent() {
                 <Route path="/gallery/:id/edit" element={
                     <ProtectedRoute>
                         <GalleryEditor/>
+                    </ProtectedRoute>
+                }/>
+                <Route path="/settings" element={
+                    <ProtectedRoute>
+                        <Settings/>
                     </ProtectedRoute>
                 }/>
 

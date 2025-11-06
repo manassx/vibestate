@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useState, useEffect} from 'react';
 import {useNavigate} from 'react-router-dom';
 import {ArrowLeft, ArrowRight} from 'lucide-react';
 import {motion} from 'framer-motion';
@@ -9,6 +9,7 @@ import useGalleryStore from '../store/galleryStore';
 import {generateSlug} from '../utils/helpers';
 import {useTheme} from '../context/ThemeContext';
 import {compressImages} from '../utils/imageCompression';
+import api from '../utils/api';
 
 const CreateGallery = () => {
     const navigate = useNavigate();
@@ -26,6 +27,29 @@ const CreateGallery = () => {
     const [analysisProgress, setAnalysisProgress] = useState(0);
     const [createdGalleryId, setCreatedGalleryId] = useState(null);
     const [compressionProgress, setCompressionProgress] = useState(0);
+    const [userPreferences, setUserPreferences] = useState({
+        defaultThreshold: 80,
+        compressImages: true
+    });
+
+    // Fetch user preferences on mount
+    useEffect(() => {
+        const fetchPreferences = async () => {
+            try {
+                const data = await api.get('/api/user/settings');
+                if (data && data.preferences) {
+                    setUserPreferences({
+                        defaultThreshold: data.preferences.defaultThreshold || 80,
+                        compressImages: data.preferences.compressImages !== false
+                    });
+                    console.log('Loaded user preferences:', data.preferences);
+                }
+            } catch (error) {
+                console.log('Could not load preferences, using defaults');
+            }
+        };
+        fetchPreferences();
+    }, []);
 
     const handleDetailsSubmit = (e) => {
         e.preventDefault();
@@ -52,32 +76,39 @@ const CreateGallery = () => {
         setProcessingStep(0); // Start at 0 for compression
 
         try {
-            // Step 0: Compress images (NEW!)
-            setProcessingStep(0);
-            toast.loading('Optimizing images (95% quality)...', {id: 'compress'});
+            // Step 0: Compress images (if enabled in preferences)
+            let filesToUpload = uploadedFiles;
 
-            console.log('Starting compression for', uploadedFiles.length, 'files');
-            const compressedFiles = await compressImages(uploadedFiles, (progress) => {
-                setCompressionProgress(progress);
-            });
+            if (userPreferences.compressImages) {
+                setProcessingStep(0);
+                toast.loading('Optimizing images (95% quality)...', {id: 'compress'});
 
-            console.log('Compression complete! Compressed files:', compressedFiles.length);
-            toast.success('Images optimized!', {id: 'compress'});
+                console.log('Starting compression for', uploadedFiles.length, 'files');
+                const compressedFiles = await compressImages(uploadedFiles, (progress) => {
+                    setCompressionProgress(progress);
+                });
 
-            // Verify files are valid
-            if (!compressedFiles || compressedFiles.length === 0) {
-                throw new Error('Image compression failed - no files returned');
+                console.log('Compression complete! Compressed files:', compressedFiles.length);
+                toast.success('Images optimized!', {id: 'compress'});
+
+                // Verify files are valid
+                if (!compressedFiles || compressedFiles.length === 0) {
+                    throw new Error('Image compression failed - no files returned');
+                }
+
+                filesToUpload = compressedFiles;
             }
 
-            // Step 1: Create gallery
+            // Step 1: Create gallery with user's default threshold
             setProcessingStep(1);
             toast.loading('Creating gallery...', {id: 'create'});
 
+            console.log('Creating gallery with threshold:', userPreferences.defaultThreshold);
             const newGallery = await createGallery({
                 name: galleryData.name,
                 description: galleryData.description,
                 config: {
-                    threshold: 80,
+                    threshold: userPreferences.defaultThreshold,
                     animationType: 'fade',
                     mood: 'calm'
                 }
@@ -86,11 +117,11 @@ const CreateGallery = () => {
             setCreatedGalleryId(newGallery.id);
             toast.success('Gallery created!', {id: 'create'});
 
-            // Step 2: Upload compressed images
+            // Step 2: Upload images
             setProcessingStep(2);
-            toast.loading(`Uploading ${compressedFiles.length} optimized images...`, {id: 'upload'});
+            toast.loading(`Uploading ${filesToUpload.length} images...`, {id: 'upload'});
 
-            const result = await uploadImages(newGallery.id, compressedFiles);
+            const result = await uploadImages(newGallery.id, filesToUpload);
 
             setUploadProgress(100);
             toast.success(`${result.uploadedCount} images uploaded!`, {id: 'upload'});

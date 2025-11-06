@@ -21,8 +21,9 @@ const SignupPage = () => {
     const [tiltRotation, setTiltRotation] = useState({rotateX: 0, rotateY: 0});
     const [buttonPosition, setButtonPosition] = useState({x: 0, y: 0});
     const [focusedField, setFocusedField] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
 
-    const {signup, isLoading, error} = useAuthStore();
+    const {signup, error} = useAuthStore();
     const navigate = useNavigate();
     const cardRef = useRef(null);
     const buttonRef = useRef(null);
@@ -160,9 +161,29 @@ const SignupPage = () => {
         }
     };
 
-    const handleGoogleSignUp = () => {
-        toast.error('Google Sign-Up coming soon!');
-        // Implement Google OAuth here
+    const handleGoogleSignUp = async () => {
+        try {
+            const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+
+            if (!SUPABASE_URL) {
+                toast.error('Supabase configuration missing');
+                return;
+            }
+
+            const redirectTo = `${window.location.origin}/auth/callback`;
+
+            // Construct proper Supabase OAuth URL
+            const authUrl = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`;
+
+            console.log('Redirecting to Google OAuth:', authUrl);
+
+            // Redirect to Supabase Google OAuth
+            window.location.href = authUrl;
+
+        } catch (error) {
+            console.error('Google sign-up error:', error);
+            toast.error('Failed to sign up with Google');
+        }
     };
 
     return (

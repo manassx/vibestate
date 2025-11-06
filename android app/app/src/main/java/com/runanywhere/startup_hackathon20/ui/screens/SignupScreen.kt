@@ -11,10 +11,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.runanywhere.startup_hackathon20.data.local.AppPreferences
+import com.runanywhere.startup_hackathon20.data.remote.NetworkRepository
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -23,10 +27,16 @@ fun SignupScreen(
     onSignupSuccess: (String, String) -> Unit,
     onNavigateToLogin: () -> Unit
 ) {
+    val context = LocalContext.current
+    val prefs = remember { AppPreferences(context) }
+    val networkRepository = remember { NetworkRepository(context) }
+    val coroutineScope = rememberCoroutineScope()
+
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         topBar = {
@@ -68,13 +78,27 @@ fun SignupScreen(
                 modifier = Modifier.padding(bottom = 48.dp)
             )
 
+            // Error message
+            if (errorMessage != null) {
+                Text(
+                    text = errorMessage ?: "",
+                    color = MaterialTheme.colorScheme.error,
+                    fontSize = 14.sp,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+            }
+
             OutlinedTextField(
                 value = name,
-                onValueChange = { name = it },
+                onValueChange = {
+                    name = it
+                    errorMessage = null
+                },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Name") },
                 placeholder = { Text("Your name") },
                 singleLine = true,
+                enabled = !isLoading,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = MaterialTheme.colorScheme.primary
                 )
@@ -84,11 +108,15 @@ fun SignupScreen(
 
             OutlinedTextField(
                 value = email,
-                onValueChange = { email = it },
+                onValueChange = {
+                    email = it
+                    errorMessage = null
+                },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Email") },
                 placeholder = { Text("your@email.com") },
                 singleLine = true,
+                enabled = !isLoading,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = MaterialTheme.colorScheme.primary
                 )
@@ -98,11 +126,15 @@ fun SignupScreen(
 
             OutlinedTextField(
                 value = password,
-                onValueChange = { password = it },
+                onValueChange = {
+                    password = it
+                    errorMessage = null
+                },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Password") },
                 placeholder = { Text("••••••••") },
                 singleLine = true,
+                enabled = !isLoading,
                 visualTransformation = PasswordVisualTransformation(),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = MaterialTheme.colorScheme.primary
@@ -115,7 +147,34 @@ fun SignupScreen(
                 onClick = {
                     if (name.isNotBlank() && email.isNotBlank() && password.isNotBlank()) {
                         isLoading = true
-                        onSignupSuccess(email, name)
+                        errorMessage = null
+
+                        coroutineScope.launch {
+                            try {
+                                val result = networkRepository.signup(email, password, name)
+
+                                if (result.isSuccess) {
+                                    val authResponse = result.getOrThrow()
+
+                                    // Save to preferences
+                                    prefs.isLoggedIn = true
+                                    prefs.userEmail = authResponse.user.email
+                                    prefs.userName = authResponse.user.name
+                                    prefs.userId = authResponse.user.id
+                                    prefs.authToken = authResponse.token
+
+                                    // Navigate to dashboard
+                                    onSignupSuccess(authResponse.user.email, authResponse.user.name)
+                                } else {
+                                    errorMessage =
+                                        result.exceptionOrNull()?.message ?: "Signup failed"
+                                    isLoading = false
+                                }
+                            } catch (e: Exception) {
+                                errorMessage = e.message ?: "Network error"
+                                isLoading = false
+                            }
+                        }
                     }
                 },
                 modifier = Modifier

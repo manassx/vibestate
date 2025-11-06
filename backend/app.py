@@ -52,6 +52,13 @@ def get_user_from_token():
         return None
 
 
+def get_token_from_request():
+    """Extract just the token from Authorization header"""
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return None
+    return auth_header.replace('Bearer ', '')
+
 def generate_slug(name, user_id):
     """Generate a URL-friendly slug from gallery name"""
     # Convert to lowercase and replace spaces with hyphens
@@ -143,6 +150,32 @@ def signup():
         user = res.user
         session = res.session
 
+        # Create user settings entry
+        if user:
+            try:
+                user_settings_data = {
+                    "user_id": user.id,
+                    "profile": {
+                        "bio": "",
+                        "website": "",
+                        "location": ""
+                    },
+                    "preferences": {
+                        "emailNotifications": True,
+                        "browserNotifications": False,
+                        "galleryUpdates": True,
+                        "marketingEmails": False,
+                        "defaultGalleryVisibility": "private",
+                        "autoSave": True,
+                        "compressImages": True,
+                        "defaultThreshold": 80,
+                        "language": "en"
+                    }
+                }
+                supabase.table('user_settings').insert(user_settings_data).execute()
+            except Exception as e:
+                print(f"Error creating user settings: {e}")
+
         if session:
             return jsonify({
                 "user": {
@@ -182,22 +215,31 @@ def login():
     Expects JSON body with: { "email": "", "password": "" }
     """
     try:
+        print("=" * 50)
+        print("Login attempt received")
+        
         data = request.get_json()
         if not data:
+            print("Error: Missing JSON data")
             return jsonify({"error": "Missing JSON data"}), 400
 
         email = data.get("email")
         password = data.get("password")
+        
+        print(f"Email: {email}")
 
         if not email or not password:
+            print("Error: Missing email or password")
             return jsonify({"error": "Missing required fields (email, password)"}), 400
 
         # Sign in the user
+        print("Attempting Supabase sign in...")
         res = supabase.auth.sign_in_with_password({
             "email": email,
             "password": password
         })
-
+        
+        print("Sign in successful!")
         user = res.user
         session = res.session
 
@@ -213,10 +255,12 @@ def login():
 
     except Exception as e:
         error_message = str(e)
+        print(f"Login error: {error_message}")
+        print(f"Error type: {type(e).__name__}")
+        
         if "Invalid login credentials" in error_message:
             return jsonify({"error": "Invalid email or password"}), 401
 
-        print(f"Error during login: {e}")
         return jsonify({"error": error_message}), 500
 
 
@@ -224,6 +268,320 @@ def login():
 def logout():
     """Handle user logout"""
     return jsonify({"message": "Logged out successfully"}), 200
+
+
+@app.route("/api/auth/me", methods=["GET"])
+def get_current_user():
+    """Get current user info with latest metadata"""
+    user = get_user_from_token()
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        # Fetch latest user data from Supabase to get updated metadata
+        fresh_user = supabase.auth.admin.get_user_by_id(user.id)
+        if fresh_user and fresh_user.user:
+            return jsonify({
+                "user": {
+                    "id": fresh_user.user.id,
+                    "email": fresh_user.user.email,
+                    "name": fresh_user.user.user_metadata.get("full_name", ""),
+                    "createdAt": fresh_user.user.created_at
+                }
+            }), 200
+        else:
+            # Fallback to token user
+            return jsonify({
+                "user": {
+                    "id": user.id,
+                    "email": user.email,
+                    "name": user.user_metadata.get("full_name", ""),
+                    "createdAt": user.created_at
+                }
+            }), 200
+    except Exception as e:
+        print(f"Error fetching user: {e}")
+        # Fallback to token user
+        return jsonify({
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "name": user.user_metadata.get("full_name", ""),
+                "createdAt": user.created_at
+            }
+        }), 200
+
+
+# ==================== User Settings Routes ====================
+
+@app.route("/api/user/settings", methods=["GET"])
+def get_user_settings():
+    """Get user settings"""
+    user = get_user_from_token()
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        # Fetch user settings
+        result = supabase.table('user_settings').select('*').eq('user_id', user.id).execute()
+        
+        if result.data and len(result.data) > 0:
+            settings = result.data[0]
+            # Include user info
+            return jsonify({
+                "profile": settings.get('profile', {}),
+                "preferences": settings.get('preferences', {})
+            }), 200
+        else:
+            # Create default settings if not exist
+            default_settings = {
+                "user_id": user.id,
+                "profile": {
+                    "bio": "",
+                    "website": "",
+                    "location": ""
+                },
+                "preferences": {
+                    "emailNotifications": True,
+                    "browserNotifications": False,
+                    "galleryUpdates": True,
+                    "marketingEmails": False,
+                    "defaultGalleryVisibility": "private",
+                    "autoSave": True,
+                    "compressImages": True,
+                    "defaultThreshold": 80,
+                    "language": "en"
+                }
+            }
+            result = supabase.table('user_settings').insert(default_settings).execute()
+            return jsonify({
+                "profile": default_settings["profile"],
+                "preferences": default_settings["preferences"]
+            }), 200
+    
+    except Exception as e:
+        print(f"Error fetching user settings: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/user/profile", methods=["PUT"])
+def update_user_profile():
+    """Update user profile information"""
+    user = get_user_from_token()
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "Missing JSON data"}), 400
+        
+        print(f"Updating profile for user {user.id}")
+        print(f"Data received: {data}")
+        
+        # Update auth metadata if name changed
+        if "name" in data:
+            try:
+                print(f"Updating user name to: {data['name']}")
+                supabase.auth.admin.update_user_by_id(
+                    user.id,
+                    {"user_metadata": {"full_name": data["name"]}}
+                )
+                print("Name updated successfully in auth")
+            except Exception as e:
+                print(f"Error updating auth metadata: {e}")
+        
+        # Get current settings
+        result = supabase.table('user_settings').select('*').eq('user_id', user.id).execute()
+        
+        profile_data = {
+            "bio": data.get("bio", ""),
+            "website": data.get("website", ""),
+            "location": data.get("location", "")
+        }
+        
+        print(f"Updating profile data: {profile_data}")
+        
+        if result.data and len(result.data) > 0:
+            # Update existing
+            supabase.table('user_settings').update({"profile": profile_data}).eq('user_id', user.id).execute()
+        else:
+            # Create new
+            supabase.table('user_settings').insert({
+                "user_id": user.id,
+                "profile": profile_data
+            }).execute()
+        
+        print("Profile updated successfully")
+        return jsonify({"message": "Profile updated successfully", "profile": profile_data}), 200
+    
+    except Exception as e:
+        print(f"Error updating profile: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/user/preferences", methods=["PUT"])
+def update_user_preferences():
+    """Update user preferences"""
+    user = get_user_from_token()
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "Missing JSON data"}), 400
+        
+        # Get current settings
+        result = supabase.table('user_settings').select('*').eq('user_id', user.id).execute()
+        
+        if result.data and len(result.data) > 0:
+            # Update existing
+            supabase.table('user_settings').update({"preferences": data}).eq('user_id', user.id).execute()
+        else:
+            # Create new
+            supabase.table('user_settings').insert({
+                "user_id": user.id,
+                "preferences": data
+            }).execute()
+        
+        return jsonify({"message": "Preferences updated successfully", "preferences": data}), 200
+    
+    except Exception as e:
+        print(f"Error updating preferences: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/user/change-password", methods=["POST"])
+def change_password():
+    """Change user password"""
+    user = get_user_from_token()
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "Missing JSON data"}), 400
+        
+        current_password = data.get("currentPassword")
+        new_password = data.get("newPassword")
+        
+        if not current_password or not new_password:
+            return jsonify({"error": "Missing required fields"}), 400
+        
+        if len(new_password) < 6:
+            return jsonify({"error": "Password must be at least 6 characters"}), 400
+        
+        # Verify current password by trying to sign in
+        try:
+            supabase.auth.sign_in_with_password({
+                "email": user.email,
+                "password": current_password
+            })
+        except Exception as e:
+            return jsonify({"error": "Current password is incorrect"}), 401
+        
+        # Update password
+        try:
+            supabase.auth.admin.update_user_by_id(
+                user.id,
+                {"password": new_password}
+            )
+            return jsonify({"message": "Password changed successfully"}), 200
+        except Exception as e:
+            print(f"Error updating password: {e}")
+            return jsonify({"error": "Failed to update password"}), 500
+    
+    except Exception as e:
+        print(f"Error changing password: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/user/export-data", methods=["GET"])
+def export_user_data():
+    """Export all user data"""
+    user = get_user_from_token()
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        # Fetch all user galleries
+        result = supabase.table('galleries').select('*').eq('user_id', user.id).execute()
+        galleries = result.data if result.data else []
+        
+        # Fetch images for each gallery
+        for gallery in galleries:
+            images_result = supabase.table('images').select('*').eq('gallery_id', gallery['id']).execute()
+            gallery['images'] = images_result.data if images_result.data else []
+        
+        # Fetch user settings
+        settings_result = supabase.table('user_settings').select('*').eq('user_id', user.id).execute()
+        settings = settings_result.data[0] if settings_result.data else {}
+        
+        # Compile export data
+        export_data = {
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "name": user.user_metadata.get("full_name", ""),
+                "created_at": user.created_at
+            },
+            "settings": settings,
+            "galleries": galleries,
+            "export_date": datetime.utcnow().isoformat()
+        }
+        
+        return jsonify(export_data), 200
+    
+    except Exception as e:
+        print(f"Error exporting data: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/user/account", methods=["DELETE"])
+def delete_user_account():
+    """Delete user account and all associated data"""
+    user = get_user_from_token()
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        # Get all galleries
+        galleries_result = supabase.table('galleries').select('*').eq('user_id', user.id).execute()
+        galleries = galleries_result.data if galleries_result.data else []
+        
+        # Delete all images from storage
+        for gallery in galleries:
+            images_result = supabase.table('images').select('url').eq('gallery_id', gallery['id']).execute()
+            if images_result.data:
+                for image in images_result.data:
+                    try:
+                        # Extract file path from URL
+                        url = image['url']
+                        if STORAGE_BUCKET in url:
+                            file_path = url.split(f"{STORAGE_BUCKET}/")[-1].split("?")[0]
+                            supabase.storage.from_(STORAGE_BUCKET).remove([file_path])
+                    except Exception as e:
+                        print(f"Error deleting image from storage: {e}")
+        
+        # Delete user settings
+        supabase.table('user_settings').delete().eq('user_id', user.id).execute()
+        
+        # Delete galleries (cascade will delete images from database)
+        supabase.table('galleries').delete().eq('user_id', user.id).execute()
+        
+        # Delete user from auth
+        try:
+            supabase.auth.admin.delete_user(user.id)
+        except Exception as e:
+            print(f"Error deleting user from auth: {e}")
+        
+        return jsonify({"message": "Account deleted successfully"}), 200
+    
+    except Exception as e:
+        print(f"Error deleting account: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
 # ==================== Gallery Routes ====================
