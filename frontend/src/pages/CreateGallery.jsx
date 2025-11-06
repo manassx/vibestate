@@ -8,10 +8,11 @@ import UploadProgress from '../components/upload/UploadProgress';
 import useGalleryStore from '../store/galleryStore';
 import {generateSlug} from '../utils/helpers';
 import {useTheme} from '../context/ThemeContext';
+import {compressImages} from '../utils/imageCompression';
 
 const CreateGallery = () => {
     const navigate = useNavigate();
-    const {createGallery, uploadImages, analyzeGallery, isLoading} = useGalleryStore();
+    const {createGallery, uploadImages, updateGallery, isLoading} = useGalleryStore();
     const {isDark, currentTheme} = useTheme();
 
     const [step, setStep] = useState(1); // 1: Details, 2: Upload, 3: Processing
@@ -24,6 +25,7 @@ const CreateGallery = () => {
     const [uploadProgress, setUploadProgress] = useState(0);
     const [analysisProgress, setAnalysisProgress] = useState(0);
     const [createdGalleryId, setCreatedGalleryId] = useState(null);
+    const [compressionProgress, setCompressionProgress] = useState(0);
 
     const handleDetailsSubmit = (e) => {
         e.preventDefault();
@@ -42,73 +44,85 @@ const CreateGallery = () => {
 
     const handleCreateGallery = async () => {
         if (uploadedFiles.length === 0) {
-            toast.error('Please upload at least 10 images');
+            toast.error('Please upload at least 1 image');
             return;
         }
 
         setStep(3);
-        setProcessingStep(1);
+        setProcessingStep(0); // Start at 0 for compression
 
         try {
+            // Step 0: Compress images (NEW!)
+            setProcessingStep(0);
+            toast.loading('Optimizing images (95% quality)...', {id: 'compress'});
+
+            console.log('Starting compression for', uploadedFiles.length, 'files');
+            const compressedFiles = await compressImages(uploadedFiles, (progress) => {
+                setCompressionProgress(progress);
+            });
+
+            console.log('Compression complete! Compressed files:', compressedFiles.length);
+            toast.success('Images optimized!', {id: 'compress'});
+
+            // Verify files are valid
+            if (!compressedFiles || compressedFiles.length === 0) {
+                throw new Error('Image compression failed - no files returned');
+            }
+
             // Step 1: Create gallery
+            setProcessingStep(1);
             toast.loading('Creating gallery...', {id: 'create'});
 
-            // Simulate API call for demo (replace with actual API)
-            const newGallery = {
-                id: Math.random().toString(36).substr(2, 9),
+            const newGallery = await createGallery({
                 name: galleryData.name,
                 description: galleryData.description,
-                slug: generateSlug(galleryData.name),
-                imageCount: uploadedFiles.length,
-                status: 'uploading',
-                createdAt: new Date().toISOString()
-            };
+                config: {
+                    threshold: 80,
+                    animationType: 'fade',
+                    mood: 'calm'
+                }
+            });
 
             setCreatedGalleryId(newGallery.id);
             toast.success('Gallery created!', {id: 'create'});
 
-            // Step 2: Upload images with progress simulation
-            setProcessingStep(1);
-            toast.loading('Uploading images...', {id: 'upload'});
-
-            // Simulate upload progress
-            for (let i = 0; i <= 100; i += 10) {
-                await new Promise(resolve => setTimeout(resolve, 200));
-                setUploadProgress(i);
-            }
-
-            toast.success(`${uploadedFiles.length} images uploaded!`, {id: 'upload'});
-
-            // Step 3: AI Analysis with progress simulation
+            // Step 2: Upload compressed images
             setProcessingStep(2);
-            toast.loading('AI is analyzing your photos...', {id: 'analysis'});
+            toast.loading(`Uploading ${compressedFiles.length} optimized images...`, {id: 'upload'});
 
-            // Simulate analysis progress
-            for (let i = 0; i <= 100; i += 5) {
-                await new Promise(resolve => setTimeout(resolve, 300));
-                setAnalysisProgress(i);
-            }
+            const result = await uploadImages(newGallery.id, compressedFiles);
 
-            toast.success('Analysis complete!', {id: 'analysis'});
+            setUploadProgress(100);
+            toast.success(`${result.uploadedCount} images uploaded!`, {id: 'upload'});
 
-            // Step 4: Generate gallery
+            // Step 3: Mark as ready
             setProcessingStep(3);
-            toast.loading('Generating your interactive gallery...', {id: 'generate'});
+            toast.loading('Finalizing gallery...', {id: 'finalize'});
 
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            await updateGallery(newGallery.id, {
+                status: 'analyzed',
+                analysis_complete: true
+            });
 
-            toast.success('Gallery ready!', {id: 'generate'});
+            toast.success('Gallery ready!', {id: 'finalize'});
 
-            // Navigate to gallery editor or viewer
+            // Navigate to gallery editor
             setTimeout(() => {
                 navigate(`/gallery/${newGallery.id}/edit`);
             }, 1000);
 
         } catch (error) {
             console.error('Error creating gallery:', error);
-            toast.error('Failed to create gallery. Please try again.');
+            console.error('Error details:', {
+                message: error.message,
+                status: error.status,
+                response: error.response
+            });
+            toast.error(error.message || 'Failed to create gallery. Please try again.');
             setStep(2);
             setProcessingStep(0);
+            setUploadProgress(0);
+            setCompressionProgress(0);
         }
     };
 
@@ -303,24 +317,24 @@ const CreateGallery = () => {
                                      style={{borderColor: currentTheme.border}}>
                                     <motion.button
                                         onClick={handleCreateGallery}
-                                        disabled={isLoading || uploadedFiles.length < 10}
+                                        disabled={isLoading || uploadedFiles.length < 1}
                                         className="w-full flex items-center justify-center gap-2 md:gap-3 px-6 md:px-8 py-2.5 md:py-4 lg:py-5 font-bold text-xs md:text-sm tracking-wide transition-all duration-300"
                                         style={{
-                                            backgroundColor: uploadedFiles.length >= 10 ? currentTheme.accent : currentTheme.border,
-                                            color: uploadedFiles.length >= 10 ? (isDark ? '#0a0a0a' : '#f5f3ef') : currentTheme.textDim,
-                                            cursor: uploadedFiles.length < 10 ? 'not-allowed' : 'pointer'
+                                            backgroundColor: uploadedFiles.length >= 1 ? currentTheme.accent : currentTheme.border,
+                                            color: uploadedFiles.length >= 1 ? (isDark ? '#0a0a0a' : '#f5f3ef') : currentTheme.textDim,
+                                            cursor: uploadedFiles.length < 1 ? 'not-allowed' : 'pointer'
                                         }}
-                                        whileHover={uploadedFiles.length >= 10 ? {scale: 1.02} : {}}
-                                        whileTap={uploadedFiles.length >= 10 ? {scale: 0.98} : {}}
+                                        whileHover={uploadedFiles.length >= 1 ? {scale: 1.02} : {}}
+                                        whileTap={uploadedFiles.length >= 1 ? {scale: 0.98} : {}}
                                     >
                                         <span>CREATE GALLERY</span>
                                     </motion.button>
-                                    {uploadedFiles.length < 10 && (
+                                    {uploadedFiles.length < 1 && (
                                         <p
                                             className="text-xs md:text-sm text-center mt-2 transition-colors duration-500"
                                             style={{color: currentTheme.textDim}}
                                         >
-                                            Need at least 10 images
+                                            Need at least 1 image
                                         </p>
                                     )}
                                 </div>
@@ -360,6 +374,7 @@ const CreateGallery = () => {
                             currentStep={processingStep}
                             uploadProgress={uploadProgress}
                             analysisProgress={analysisProgress}
+                            compressionProgress={compressionProgress}
                         />
 
                         <div

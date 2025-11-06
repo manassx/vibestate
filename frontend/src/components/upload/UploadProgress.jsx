@@ -1,13 +1,14 @@
 import {CheckCircle, Circle, Loader} from 'lucide-react';
 import {useTheme} from '../../context/ThemeContext';
 
-const UploadProgress = ({currentStep, uploadProgress, analysisProgress}) => {
+const UploadProgress = ({currentStep, uploadProgress, analysisProgress, compressionProgress = 0}) => {
     const {isDark, currentTheme} = useTheme();
 
     const steps = [
-        {id: 1, name: 'Upload Photos', key: 'upload'},
-        {id: 2, name: 'AI Analysis', key: 'analysis'},
-        {id: 3, name: 'Generate Gallery', key: 'generate'},
+        {id: 0, name: 'Optimizing', key: 'compression'},
+        {id: 1, name: 'Creating', key: 'create'},
+        {id: 2, name: 'Uploading', key: 'upload'},
+        {id: 3, name: 'Finalizing', key: 'finalize'},
     ];
 
     const getStepStatus = (stepId) => {
@@ -17,6 +18,7 @@ const UploadProgress = ({currentStep, uploadProgress, analysisProgress}) => {
     };
 
     const getProgress = (stepKey) => {
+        if (stepKey === 'compression') return compressionProgress;
         if (stepKey === 'upload') return uploadProgress;
         if (stepKey === 'analysis') return analysisProgress;
         return 0;
@@ -109,7 +111,7 @@ const UploadProgress = ({currentStep, uploadProgress, analysisProgress}) => {
             </div>
 
             {/* Progress Bar */}
-            {currentStep <= 2 && (
+            {currentStep <= 3 && (
                 <div className="mb-4">
                     <div
                         className="w-full rounded-full h-2 overflow-hidden transition-colors duration-300"
@@ -120,11 +122,18 @@ const UploadProgress = ({currentStep, uploadProgress, analysisProgress}) => {
                             style={{
                                 backgroundColor: currentTheme.accent,
                                 width: `${
-                                    currentStep === 1 ? uploadProgress : currentStep === 2 ? analysisProgress : 0
+                                    currentStep === 0 ? compressionProgress :
+                                        currentStep === 1 ? uploadProgress :
+                                            currentStep === 2 ? analysisProgress : 0
                                 }%`,
                             }}
                         />
                     </div>
+                    {currentStep === 0 && (
+                        <p className="text-xs text-center mt-2" style={{color: currentTheme.textMuted}}>
+                            95% quality • Maintaining visual perfection
+                        </p>
+                    )}
                 </div>
             )}
         </div>

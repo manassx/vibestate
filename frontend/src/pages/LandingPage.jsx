@@ -165,15 +165,6 @@ const LandingPage = () => {
                     {/* Desktop Nav Links */}
                     <div className="hidden md:flex items-center gap-4 lg:gap-8">
                         <Link
-                            to="/gallery/demo-gallery/edit"
-                            className="text-xs tracking-[0.2em] transition-colors duration-300"
-                            style={{color: currentTheme.textDim}}
-                            onMouseEnter={(e) => e.target.style.color = currentTheme.text}
-                            onMouseLeave={(e) => e.target.style.color = currentTheme.textDim}
-                        >
-                            DEMO
-                        </Link>
-                        <Link
                             to={isAuthenticated ? "/dashboard" : "/login"}
                             className="text-xs tracking-[0.2em] transition-colors duration-300"
                             style={{color: currentTheme.textDim}}
@@ -249,14 +240,6 @@ const LandingPage = () => {
                     >
                         <div className="flex flex-col p-4 gap-4">
                             <Link
-                                to="/gallery/demo-gallery/edit"
-                                className="text-xs tracking-[0.2em] py-2 transition-colors duration-300"
-                                style={{color: currentTheme.textDim}}
-                                onClick={() => setMobileMenuOpen(false)}
-                            >
-                                DEMO
-                            </Link>
-                            <Link
                                 to={isAuthenticated ? "/dashboard" : "/login"}
                                 className="text-xs tracking-[0.2em] py-2 transition-colors duration-300"
                                 style={{color: currentTheme.textDim}}
@@ -318,7 +301,7 @@ const LandingPage = () => {
                         className="flex flex-col sm:flex-row flex-wrap gap-3 md:gap-4"
                     >
                         <Link
-                            to="/gallery/demo-gallery/edit"
+                            to="/create"
                             className="px-6 md:px-8 py-3 md:py-4 font-bold text-xs md:text-sm tracking-wide transition-all duration-300 text-center"
                             style={{
                                 backgroundColor: currentTheme.accent,
@@ -327,10 +310,10 @@ const LandingPage = () => {
                             onMouseEnter={(e) => e.target.style.backgroundColor = currentTheme.accentHover}
                             onMouseLeave={(e) => e.target.style.backgroundColor = currentTheme.accent}
                         >
-                            VIEW DEMO
+                            GET STARTED
                         </Link>
                         <Link
-                            to="/create"
+                            to={isAuthenticated ? "/dashboard" : "/signup"}
                             className="px-6 md:px-8 py-3 md:py-4 border-2 font-bold text-xs md:text-sm tracking-wide transition-all duration-300 text-center"
                             style={{
                                 borderColor: currentTheme.accent,
@@ -345,7 +328,7 @@ const LandingPage = () => {
                                 e.target.style.color = currentTheme.accent;
                             }}
                         >
-                            CREATE YOURS
+                            {isAuthenticated ? "GO TO DASHBOARD" : "SIGN UP FREE"}
                         </Link>
                     </motion.div>
                 </div>

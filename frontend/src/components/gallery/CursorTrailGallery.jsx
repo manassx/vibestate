@@ -16,9 +16,12 @@ function CursorTrailGallery({
     const [lightboxOpen, setLightboxOpen] = useState(false);
     const [lightboxIndex, setLightboxIndex] = useState(0);
     const [isMobile, setIsMobile] = useState(false);
+    const [loadedImages, setLoadedImages] = useState(new Set());
+    const [preloadProgress, setPreloadProgress] = useState(0);
 
     const lastPosition = useRef({x: 0, y: 0});
     const containerRef = useRef(null);
+    const touchMoveRaf = useRef(null);
 
     // Default theme if none provided
     const defaultTheme = {
@@ -31,12 +34,40 @@ function CursorTrailGallery({
     // Detect mobile device
     useEffect(() => {
         const checkMobile = () => {
-            setIsMobile(window.innerWidth <= 768 || 'ontouchstart' in window);
+            const mobile = window.innerWidth <= 768 || 'ontouchstart' in window;
+            setIsMobile(mobile);
         };
         checkMobile();
         window.addEventListener('resize', checkMobile);
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
+
+    // Preload all images before allowing interaction
+    useEffect(() => {
+        if (!images || images.length === 0) return;
+
+        let loadedCount = 0;
+        const totalImages = images.length;
+        const imageUrls = new Set();
+
+        images.forEach((img) => {
+            const url = img.url || img.src;
+            if (imageUrls.has(url)) return; // Skip duplicates
+            imageUrls.add(url);
+
+            const image = new Image();
+            image.onload = () => {
+                loadedCount++;
+                setLoadedImages(prev => new Set([...prev, url]));
+                setPreloadProgress(Math.round((loadedCount / totalImages) * 100));
+            };
+            image.onerror = () => {
+                loadedCount++;
+                setPreloadProgress(Math.round((loadedCount / totalImages) * 100));
+            };
+            image.src = url;
+        });
+    }, [images]);
 
     function DecThreshold() {
         setThreshold((prev) => {
@@ -52,18 +83,12 @@ function CursorTrailGallery({
             }
             if (next < 20) next = 20;
 
-            // Constrain to 80 max on mobile/tablet
-            if (isMobile && next > 80) next = 80;
-
             return next;
         });
     }
 
     function IncThreshold() {
         setThreshold((prev) => {
-            // Limit to 80 on mobile/tablet
-            if (isMobile && prev >= 80) return 80;
-
             let next = prev;
             if (prev < 40) {
                 next = prev + 20;
@@ -76,16 +101,16 @@ function CursorTrailGallery({
             }
             if (next > 200) next = 200;
 
-            // Constrain to 80 max on mobile/tablet
-            if (isMobile && next > 80) next = 80;
-
             return next;
         });
     }
 
     function handleImageClick(imageSrc) {
         // Find the index of clicked image in the full images array
-        const index = images.findIndex(img => (img.url || img.src) === imageSrc);
+        const index = images.findIndex(img => {
+            const imgUrl = img.url || img.src;
+            return imgUrl === imageSrc;
+        });
         if (index !== -1) {
             setLightboxIndex(index);
             setLightboxOpen(true);
@@ -93,17 +118,22 @@ function CursorTrailGallery({
     }
 
     function placeImageAt(currentX, currentY) {
+        // Don't place images if still preloading
+        if (preloadProgress < 100) return;
+
         const distanceX = Math.abs(currentX - lastPosition.current.x);
         const distanceY = Math.abs(currentY - lastPosition.current.y);
 
         if (distanceX > threshold || distanceY > threshold) {
             lastPosition.current = {x: currentX, y: currentY};
-            const nextImageSrc = images[nextImage].url || images[nextImage].src;
+            // Use full images for quality
+            const currentImage = images[nextImage];
+            const imageSrc = currentImage.url || currentImage.src;
 
             setPlacedImages((prevState) => {
                 const newImage = {
                     id: uuid(),
-                    src: nextImageSrc,
+                    src: imageSrc,
                     x: currentX,
                     y: currentY,
                 };
@@ -135,12 +165,18 @@ function CursorTrailGallery({
     }
 
     function handleTouch(e) {
-        // Don't prevent default to allow tap-to-click for lightbox
-        const rect = containerRef.current.getBoundingClientRect();
-        const touch = e.touches[0];
-        const currentX = touch.clientX - rect.left;
-        const currentY = touch.clientY - rect.top;
-        placeImageAt(currentX, currentY);
+        // Use requestAnimationFrame for smoother rendering
+        if (touchMoveRaf.current) {
+            cancelAnimationFrame(touchMoveRaf.current);
+        }
+
+        touchMoveRaf.current = requestAnimationFrame(() => {
+            const rect = containerRef.current.getBoundingClientRect();
+            const touch = e.touches[0];
+            const currentX = touch.clientX - rect.left;
+            const currentY = touch.clientY - rect.top;
+            placeImageAt(currentX, currentY);
+        });
     }
 
     function closeLightbox() {
@@ -204,13 +240,24 @@ function CursorTrailGallery({
             if (clearOnLeave) {
                 container.removeEventListener("mouseleave", handleMouseLeave);
             }
+            // Clean up animation frame
+            if (touchMoveRaf.current) {
+                cancelAnimationFrame(touchMoveRaf.current);
+            }
         };
-    }, [threshold, nextImage, clearOnLeave, isMobile]);
+    }, [threshold, nextImage, clearOnLeave, isMobile, preloadProgress]);
 
     return (
         <div className={styles.container}>
-            <div ref={containerRef} className={styles.galleryContainer} style={{overflow: "hidden"}}>
-                {placedImages.map((image, index) => (
+            <div
+                ref={containerRef}
+                className={styles.galleryContainer}
+                style={{
+                    overflow: "hidden",
+                    cursor: preloadProgress < 100 ? 'wait' : 'default'
+                }}
+            >
+                {preloadProgress === 100 && placedImages.map((image, index) => (
                     <img
                         key={image.id}
                         src={image.src}
@@ -224,6 +271,45 @@ function CursorTrailGallery({
                         onClick={() => handleImageClick(image.src)}
                     />
                 ))}
+                {preloadProgress < 100 && (
+                    <div style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        textAlign: 'center',
+                        color: currentTheme.controlsText || '#f0f0f0'
+                    }}>
+                        <div style={{
+                            fontSize: isMobile ? 18 : 24,
+                            fontWeight: 'bold',
+                            marginBottom: 16
+                        }}>
+                            Preparing Gallery...
+                        </div>
+                        <div style={{
+                            width: isMobile ? 200 : 300,
+                            height: 4,
+                            backgroundColor: 'rgba(255,255,255,0.1)',
+                            borderRadius: 2,
+                            overflow: 'hidden'
+                        }}>
+                            <div style={{
+                                width: `${preloadProgress}%`,
+                                height: '100%',
+                                backgroundColor: currentTheme.controlsText || '#f0f0f0',
+                                transition: 'width 0.3s ease'
+                            }}></div>
+                        </div>
+                        <div style={{
+                            fontSize: isMobile ? 12 : 14,
+                            marginTop: 12,
+                            opacity: 0.7
+                        }}>
+                            {preloadProgress}%
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Lightbox */}

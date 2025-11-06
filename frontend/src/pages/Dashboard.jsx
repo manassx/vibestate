@@ -1,22 +1,38 @@
-import {Plus, Image as ImageIcon} from 'lucide-react';
+import {Plus, Image as ImageIcon, Trash2, ExternalLink} from 'lucide-react';
 import {Link} from 'react-router-dom';
 import {motion} from 'framer-motion';
 import useAuthStore from '../store/authStore';
 import {useTheme} from '../context/ThemeContext';
 import useGalleryStore from '../store/galleryStore';
 import {useState, useEffect} from 'react';
+import toast from 'react-hot-toast';
 
 const Dashboard = () => {
     const {user} = useAuthStore();
     const {isDark, currentTheme} = useTheme();
-    const {galleries, isLoading} = useGalleryStore();
-    const [userGalleries, setUserGalleries] = useState([]);
+    const {galleries, fetchGalleries, deleteGallery, isLoading} = useGalleryStore();
 
     useEffect(() => {
-        if (galleries) {
-            setUserGalleries(galleries);
+        // Fetch galleries from backend on mount
+        fetchGalleries().catch(err => {
+            console.error('Error fetching galleries:', err);
+            toast.error('Failed to load galleries');
+        });
+    }, []);
+
+    const handleDeleteGallery = async (galleryId) => {
+        if (!confirm('Are you sure you want to delete this gallery?')) return;
+
+        try {
+            await deleteGallery(galleryId);
+            toast.success('Gallery deleted successfully');
+        } catch (err) {
+            console.error('Error deleting gallery:', err);
+            toast.error('Failed to delete gallery');
         }
-    }, [galleries]);
+    };
+
+    const totalImages = galleries.reduce((sum, g) => sum + (g.image_count || 0), 0);
 
     return (
         <div
@@ -80,9 +96,13 @@ const Dashboard = () => {
                     transition={{duration: 0.6, delay: 0.2}}
                 >
                     {[
-                        {label: 'Total Galleries', value: userGalleries.length, icon: ImageIcon},
-                        {label: 'Total Images', value: '0', icon: ImageIcon},
-                        {label: 'Total Views', value: '0', icon: ImageIcon}
+                        {label: 'Total Galleries', value: galleries.length, icon: ImageIcon},
+                        {label: 'Total Images', value: totalImages, icon: ImageIcon},
+                        {
+                            label: 'Published',
+                            value: galleries.filter(g => g.status === 'published').length,
+                            icon: ImageIcon
+                        }
                     ].map((stat, idx) => (
                         <motion.div
                             key={idx}
@@ -127,61 +147,182 @@ const Dashboard = () => {
                     ))}
                 </motion.div>
 
-                {/* Empty state */}
-                <motion.div
-                    className="p-8 md:p-12 lg:p-16 border text-center transition-all duration-500"
-                    style={{
-                        backgroundColor: currentTheme.bgAlt,
-                        borderColor: currentTheme.border,
-                    }}
-                    initial={{opacity: 0, y: 20}}
-                    animate={{opacity: 1, y: 0}}
-                    transition={{duration: 0.6, delay: 0.4}}
-                >
-                    <div
-                        className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-4 md:mb-6 rounded-full flex items-center justify-center transition-colors duration-300"
-                        style={{
-                            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'
-                        }}
-                    >
-                        <ImageIcon
-                            className="w-8 h-8 md:w-10 md:h-10"
-                            style={{color: currentTheme.textDim}}
-                        />
+                {/* Galleries List or Empty State */}
+                {isLoading ? (
+                    <div className="text-center py-12">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-current mx-auto mb-4"
+                             style={{borderColor: currentTheme.accent}}></div>
+                        <p style={{color: currentTheme.textMuted}}>Loading galleries...</p>
                     </div>
-                    <h3
-                        className="text-2xl md:text-3xl font-black mb-3 md:mb-4 transition-colors duration-500"
-                        style={{color: currentTheme.text}}
-                    >
-                        No galleries yet
-                    </h3>
-                    <p
-                        className="text-sm md:text-base mb-6 md:mb-8 max-w-md mx-auto px-4 transition-colors duration-500"
-                        style={{fontFamily: 'Georgia, serif', color: currentTheme.textMuted}}
-                    >
-                        Create your first interactive gallery to get started. Transform your photos into a dynamic,
-                        cursor-driven experience.
-                    </p>
-                    <Link
-                        to="/create"
-                        className="inline-flex items-center gap-2 md:gap-3 px-6 md:px-8 py-3 md:py-4 font-bold text-xs md:text-sm tracking-wide transition-all duration-300"
+                ) : galleries.length === 0 ? (
+                    <motion.div
+                        className="p-8 md:p-12 lg:p-16 border text-center transition-all duration-500"
                         style={{
-                            backgroundColor: currentTheme.accent,
-                            color: isDark ? '#0a0a0a' : '#f5f3ef'
+                            backgroundColor: currentTheme.bgAlt,
+                            borderColor: currentTheme.border,
                         }}
-                        onMouseEnter={(e) => {
-                            e.target.style.backgroundColor = currentTheme.accentHover;
-                            e.target.style.transform = 'scale(1.05)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.target.style.backgroundColor = currentTheme.accent;
-                            e.target.style.transform = 'scale(1)';
-                        }}
+                        initial={{opacity: 0, y: 20}}
+                        animate={{opacity: 1, y: 0}}
+                        transition={{duration: 0.6, delay: 0.4}}
                     >
-                        <Plus size={window.innerWidth < 768 ? 16 : 20}/>
-                        <span>Create Your First Gallery</span>
-                    </Link>
-                </motion.div>
+                        <div
+                            className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-4 md:mb-6 rounded-full flex items-center justify-center transition-colors duration-300"
+                            style={{
+                                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'
+                            }}
+                        >
+                            <ImageIcon
+                                className="w-8 h-8 md:w-10 md:h-10"
+                                style={{color: currentTheme.textDim}}
+                            />
+                        </div>
+                        <h3
+                            className="text-2xl md:text-3xl font-black mb-3 md:mb-4 transition-colors duration-500"
+                            style={{color: currentTheme.text}}
+                        >
+                            No galleries yet
+                        </h3>
+                        <p
+                            className="text-sm md:text-base mb-6 md:mb-8 max-w-md mx-auto px-4 transition-colors duration-500"
+                            style={{fontFamily: 'Georgia, serif', color: currentTheme.textMuted}}
+                        >
+                            Create your first interactive gallery to get started. Transform your photos into a dynamic,
+                            cursor-driven experience.
+                        </p>
+                        <Link
+                            to="/create"
+                            className="inline-flex items-center gap-2 md:gap-3 px-6 md:px-8 py-3 md:py-4 font-bold text-xs md:text-sm tracking-wide transition-all duration-300"
+                            style={{
+                                backgroundColor: currentTheme.accent,
+                                color: isDark ? '#0a0a0a' : '#f5f3ef'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.target.style.backgroundColor = currentTheme.accentHover;
+                                e.target.style.transform = 'scale(1.05)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.target.style.backgroundColor = currentTheme.accent;
+                                e.target.style.transform = 'scale(1)';
+                            }}
+                        >
+                            <Plus size={window.innerWidth < 768 ? 16 : 20}/>
+                            <span>Create Your First Gallery</span>
+                        </Link>
+                    </motion.div>
+                ) : (
+                    <div>
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-2xl font-black" style={{color: currentTheme.text}}>Your Galleries</h2>
+                            <Link
+                                to="/create"
+                                className="inline-flex items-center gap-2 px-4 py-2 font-bold text-xs tracking-wide transition-all duration-300"
+                                style={{
+                                    backgroundColor: currentTheme.accent,
+                                    color: isDark ? '#0a0a0a' : '#f5f3ef'
+                                }}
+                            >
+                                <Plus size={16}/>
+                                <span>NEW GALLERY</span>
+                            </Link>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                            {galleries.map((gallery) => (
+                                <motion.div
+                                    key={gallery.id}
+                                    className="p-6 border transition-all duration-300"
+                                    style={{
+                                        backgroundColor: currentTheme.bgAlt,
+                                        borderColor: currentTheme.border,
+                                    }}
+                                    whileHover={{y: -4, borderColor: currentTheme.accent}}
+                                >
+                                    <h3 className="text-xl font-black mb-2"
+                                        style={{color: currentTheme.text}}>{gallery.name}</h3>
+                                    {gallery.description && (
+                                        <p className="text-sm mb-4"
+                                           style={{color: currentTheme.textMuted}}>{gallery.description}</p>
+                                    )}
+                                    <div className="flex items-center justify-between mb-4">
+                                        <span className="text-xs px-2 py-1 rounded" style={{
+                                            backgroundColor: gallery.status === 'published'
+                                                ? (isDark ? 'rgba(168, 156, 142, 0.2)' : 'rgba(42, 37, 32, 0.15)')
+                                                : (isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'),
+                                            color: gallery.status === 'published'
+                                                ? currentTheme.accent
+                                                : currentTheme.textMuted,
+                                            fontWeight: gallery.status === 'published' ? 'bold' : 'normal'
+                                        }}>{gallery.status}</span>
+                                        <span className="text-xs"
+                                              style={{color: currentTheme.textMuted}}>{gallery.image_count} images</span>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        {gallery.status === 'published' && (
+                                            <Link
+                                                to={`/gallery/${gallery.id}`}
+                                                className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-xs font-bold transition-all duration-300 hover:opacity-80"
+                                                style={{
+                                                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                                                    color: currentTheme.text,
+                                                    border: `1px solid ${currentTheme.border}`
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.backgroundColor = isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)';
+                                                    e.currentTarget.style.borderColor = currentTheme.accent;
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.backgroundColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
+                                                    e.currentTarget.style.borderColor = currentTheme.border;
+                                                }}
+                                            >
+                                                <ExternalLink size={14}/>
+                                                <span>VIEW</span>
+                                            </Link>
+                                        )}
+                                        <Link
+                                            to={`/gallery/${gallery.id}/edit`}
+                                            className="flex-1 flex items-center justify-center px-3 py-2 text-xs font-bold border transition-all duration-300 hover:opacity-80"
+                                            style={{
+                                                borderColor: currentTheme.border,
+                                                color: currentTheme.text,
+                                                backgroundColor: 'transparent'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.borderColor = currentTheme.accent;
+                                                e.currentTarget.style.backgroundColor = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.borderColor = currentTheme.border;
+                                                e.currentTarget.style.backgroundColor = 'transparent';
+                                            }}
+                                        >
+                                            EDIT
+                                        </Link>
+                                        <button
+                                            onClick={() => handleDeleteGallery(gallery.id)}
+                                            className="px-3 py-2 border transition-all duration-300 hover:opacity-80"
+                                            style={{
+                                                borderColor: currentTheme.border,
+                                                color: '#ff4444',
+                                                backgroundColor: 'transparent'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.borderColor = '#ff4444';
+                                                e.currentTarget.style.backgroundColor = 'rgba(255, 68, 68, 0.1)';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.borderColor = currentTheme.border;
+                                                e.currentTarget.style.backgroundColor = 'transparent';
+                                            }}
+                                        >
+                                            <Trash2 size={14}/>
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
 
             <style jsx>{`

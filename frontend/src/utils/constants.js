@@ -30,7 +30,7 @@ export const GALLERY_CONFIG = {
     MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
 
     // Default interaction settings
-    DEFAULT_THRESHOLD: 100,
+    DEFAULT_THRESHOLD: 80,
     MIN_THRESHOLD: 20,
     MAX_THRESHOLD: 200,
 

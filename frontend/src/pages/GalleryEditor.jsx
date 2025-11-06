@@ -1,79 +1,72 @@
 import {useState, useEffect} from 'react';
 import {useParams, useNavigate, Link} from 'react-router-dom';
-import {ArrowLeft, X} from 'lucide-react';
+import {ArrowLeft, ExternalLink} from 'lucide-react';
 import CursorTrailGallery from '../components/gallery/CursorTrailGallery';
 import {useTheme} from '../context/ThemeContext';
+import {get as apiGet, patch} from '../utils/api';
+import toast from 'react-hot-toast';
 
 const GalleryEditor = () => {
     const {id} = useParams();
     const navigate = useNavigate();
     const {currentTheme, isDark} = useTheme();
     const [gallery, setGallery] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    // Load gallery data (simulated for now)
     useEffect(() => {
         loadGallery();
     }, [id]);
 
     const loadGallery = async () => {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 500));
+        try {
+            setLoading(true);
+            setError(null);
 
-        // Mock gallery data
-        const mockGallery = {
-            id: id,
-            name: 'My Awesome Gallery',
-            images: generateMockImages(28),
-        };
+            // Fetch gallery from backend
+            const galleryData = await apiGet(`/api/galleries/${id}`);
 
-        setGallery(mockGallery);
+            // Transform images to the format expected by CursorTrailGallery
+            const formattedGallery = {
+                id: galleryData.id,
+                name: galleryData.name,
+                description: galleryData.description,
+                status: galleryData.status,
+                images: galleryData.images.map((img, index) => ({
+                    id: img.id,
+                    url: img.url,
+                    thumbnail: img.thumbnail_url || img.url,
+                    title: `Photo ${index + 1}`,
+                })),
+                config: galleryData.config || {
+                    threshold: 80,
+                    animationType: 'fade',
+                    mood: 'calm'
+                },
+            };
+
+            setGallery(formattedGallery);
+            setLoading(false);
+        } catch (err) {
+            console.error('Error loading gallery:', err);
+            setError(err.message || 'Failed to load gallery');
+            setLoading(false);
+            toast.error('Failed to load gallery');
+        }
     };
 
-    const generateMockImages = (count) => {
-        // List of actual images from public/images folder
-        const imageFiles = [
-            'IMG-20241017-WA0006.jpg',
-            'IMG-20250224-WA0001.jpg',
-            'IMG-20250224-WA0004.jpg',
-            'IMG-20250628-WA0009.jpg',
-            'IMG-20250628-WA0012.jpg',
-            'IMG-20250628-WA0014.jpg',
-            'IMG-20250628-WA0018.jpg',
-            'IMG-20250628-WA0019.jpg',
-            'IMG-20250628-WA0002.jpg',
-            'IMG-20250224-WA0006.jpg',
-            'IMG-20250628-WA0021.jpg',
-            'IMG-20250628-WA0022.jpg',
-            'IMG-20250628-WA0023.jpg',
-            'IMG-20250628-WA0024.jpg',
-            'IMG-20250628-WA0025.jpg',
-            'IMG-20250628-WA0026.jpg',
-            'IMG-20250628-WA0027.jpg',
-            'IMG-20250628-WA0029.jpg',
-            'IMG-20250628-WA0032.jpg',
-            'IMG-20250628-WA0033.jpg',
-            'IMG-20250628-WA0036.jpg',
-            'IMG-20250628-WA0037.jpg',
-            'IMG-20250628-WA0039.jpg',
-            'IMG-20250628-WA0040.jpg',
-            'IMG-20250628-WA0041.jpg',
-            'IMG-20250628-WA0042.jpg',
-            'IMG-20250628-WA0044.jpg',
-            'IMG_20240713_035003.jpg',
-        ];
-
-        // Use all available images or limit to count
-        const imagesToUse = imageFiles.slice(0, Math.min(count, imageFiles.length));
-
-        return imagesToUse.map((filename, i) => ({
-            id: i + 1,
-            url: `/images/${filename}`,
-            thumbnail: `/images/${filename}`,
-            title: `Photo ${i + 1}`,
-        }));
+    const handlePublish = async () => {
+        try {
+            await patch(`/api/galleries/${id}`, {status: 'published'});
+            toast.success('Gallery published!');
+            setGallery(prev => ({...prev, status: 'published'}));
+        } catch (err) {
+            console.error('Error publishing gallery:', err);
+            toast.error('Failed to publish gallery');
+        }
     };
 
-    if (!gallery) {
+    if (loading) {
         return (
             <div style={{
                 minHeight: '100vh',
@@ -84,7 +77,68 @@ const GalleryEditor = () => {
                 color: currentTheme.text,
                 fontFamily: '"Inter", sans-serif'
             }}>
-                <p>Loading gallery...</p>
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-current mx-auto mb-4"></div>
+                    <p>Loading gallery...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (error || !gallery) {
+        return (
+            <div style={{
+                minHeight: '100vh',
+                backgroundColor: currentTheme.bg,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: currentTheme.text,
+                fontFamily: '"Inter", sans-serif'
+            }}>
+                <div className="text-center">
+                    <p className="text-xl mb-4">😕 Failed to load gallery</p>
+                    <p className="text-sm opacity-70 mb-6">{error}</p>
+                    <button
+                        onClick={() => navigate('/dashboard')}
+                        className="px-6 py-2 rounded-lg font-medium"
+                        style={{
+                            backgroundColor: currentTheme.accent,
+                            color: '#fff'
+                        }}
+                    >
+                        Back to Dashboard
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    if (!gallery.images || gallery.images.length === 0) {
+        return (
+            <div style={{
+                minHeight: '100vh',
+                backgroundColor: currentTheme.bg,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: currentTheme.text,
+                fontFamily: '"Inter", sans-serif'
+            }}>
+                <div className="text-center">
+                    <p className="text-xl mb-4">📷 No images in this gallery yet</p>
+                    <p className="text-sm opacity-70 mb-6">Upload some images to get started</p>
+                    <button
+                        onClick={() => navigate('/dashboard')}
+                        className="px-6 py-2 rounded-lg font-medium"
+                        style={{
+                            backgroundColor: currentTheme.accent,
+                            color: '#fff'
+                        }}
+                    >
+                        Back to Dashboard
+                    </button>
+                </div>
             </div>
         );
     }
@@ -122,9 +176,65 @@ const GalleryEditor = () => {
                 <span>EXIT</span>
             </button>
 
+            {/* Gallery Info */}
+            <div className="fixed top-4 right-4 md:top-6 md:right-6 z-50 flex gap-2">
+                <div className="px-4 py-2 rounded-lg opacity-90" style={{
+                    backgroundColor: currentTheme.bgAlt,
+                    border: `1px solid ${currentTheme.border}`
+                }}>
+                    <p className="text-sm font-medium">{gallery.name}</p>
+                    <p className="text-xs opacity-60">{gallery.images.length} photos • {gallery.status}</p>
+                </div>
+
+                {gallery.status !== 'published' && (
+                    <button
+                        onClick={handlePublish}
+                        className="px-4 py-2 rounded-lg font-bold text-xs transition-all duration-300"
+                        style={{
+                            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                            color: currentTheme.text,
+                            border: `1px solid ${currentTheme.border}`
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)';
+                            e.currentTarget.style.borderColor = currentTheme.accent;
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
+                            e.currentTarget.style.borderColor = currentTheme.border;
+                        }}
+                    >
+                        PUBLISH
+                    </button>
+                )}
+
+                {gallery.status === 'published' && (
+                    <button
+                        onClick={() => window.open(`/gallery/${id}`, '_blank')}
+                        className="px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-1 transition-all duration-300"
+                        style={{
+                            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                            color: currentTheme.text,
+                            border: `1px solid ${currentTheme.border}`
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)';
+                            e.currentTarget.style.borderColor = currentTheme.accent;
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
+                            e.currentTarget.style.borderColor = currentTheme.border;
+                        }}
+                    >
+                        <ExternalLink size={14}/>
+                        <span>VIEW</span>
+                    </button>
+                )}
+            </div>
+
             <CursorTrailGallery
                 images={gallery.images}
-                threshold={80}
+                threshold={gallery.config.threshold || 80}
                 showControls={true}
                 theme={{
                     controlsBg: currentTheme.bgAlt,

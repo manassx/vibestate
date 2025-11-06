@@ -5,7 +5,7 @@ import {persist, createJSONStorage} from 'zustand/middleware';
 import axios from 'axios'; // Import axios
 
 // Your Flask backend URL
-const API_URL = 'http://127.0.0.1:5001/api/auth';
+const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth`;
 
 // Define the initial (logged-out) state
 const initialState = {

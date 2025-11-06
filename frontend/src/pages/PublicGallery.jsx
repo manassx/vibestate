@@ -3,82 +3,57 @@ import {useParams, useNavigate} from 'react-router-dom';
 import {Home} from 'lucide-react';
 import CursorTrailGallery from '../components/gallery/CursorTrailGallery';
 import {useTheme} from '../context/ThemeContext';
+import {get as apiGet} from '../utils/api';
+import {API_ENDPOINTS} from '../utils/constants';
 
 const PublicGallery = () => {
     const {id} = useParams();
     const navigate = useNavigate();
     const {currentTheme, isDark} = useTheme();
     const [gallery, setGallery] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
         loadPublicGallery();
     }, [id]);
 
     const loadPublicGallery = async () => {
-        // Check for preview config in localStorage
-        const previewConfig = localStorage.getItem(`gallery-${id}-preview`);
+        try {
+            setLoading(true);
+            setError(null);
 
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 500));
+            // Fetch gallery from backend
+            const galleryData = await apiGet(`/api/gallery/${id}`);
 
-        // Mock gallery data
-        const mockGallery = {
-            id: id,
-            name: 'My Awesome Gallery',
-            images: generateMockImages(28),
-            config: previewConfig ? JSON.parse(previewConfig) : {
-                threshold: 80,
-            },
-        };
+            // Transform images to the format expected by CursorTrailGallery
+            const formattedGallery = {
+                id: galleryData.id,
+                name: galleryData.name,
+                description: galleryData.description,
+                images: galleryData.images.map((img, index) => ({
+                    id: img.id,
+                    url: img.url,
+                    thumbnail: img.thumbnail_url || img.url,
+                    title: `Photo ${index + 1}`,
+                })),
+                config: galleryData.config || {
+                    threshold: 80,
+                    animationType: 'fade',
+                    mood: 'calm'
+                },
+            };
 
-        setGallery(mockGallery);
+            setGallery(formattedGallery);
+            setLoading(false);
+        } catch (err) {
+            console.error('Error loading gallery:', err);
+            setError(err.message || 'Failed to load gallery');
+            setLoading(false);
+        }
     };
 
-    const generateMockImages = (count) => {
-        // List of actual images from public/images folder
-        const imageFiles = [
-            'IMG-20241017-WA0006.jpg',
-            'IMG-20250224-WA0001.jpg',
-            'IMG-20250224-WA0004.jpg',
-            'IMG-20250628-WA0002.jpg',
-            'IMG-20250628-WA0009.jpg',
-            'IMG-20250628-WA0012.jpg',
-            'IMG-20250628-WA0014.jpg',
-            'IMG-20250628-WA0018.jpg',
-            'IMG-20250224-WA0006.jpg',
-            'IMG-20250628-WA0019.jpg',
-            'IMG-20250628-WA0021.jpg',
-            'IMG-20250628-WA0023.jpg',
-            'IMG-20250628-WA0024.jpg',
-            'IMG-20250628-WA0044.jpg',
-            'IMG-20250628-WA0025.jpg',
-            'IMG-20250628-WA0026.jpg',
-            'IMG-20250628-WA0027.jpg',
-            'IMG-20250628-WA0029.jpg',
-            'IMG-20250628-WA0022.jpg',
-            'IMG-20250628-WA0032.jpg',
-            'IMG-20250628-WA0033.jpg',
-            'IMG-20250628-WA0036.jpg',
-            'IMG-20250628-WA0037.jpg',
-            'IMG-20250628-WA0039.jpg',
-            'IMG-20250628-WA0040.jpg',
-            'IMG-20250628-WA0041.jpg',
-            'IMG-20250628-WA0042.jpg',
-            'IMG_20240713_035003.jpg',
-        ];
-
-        // Use all available images or limit to count
-        const imagesToUse = imageFiles.slice(0, Math.min(count, imageFiles.length));
-
-        return imagesToUse.map((filename, i) => ({
-            id: i + 1,
-            url: `/images/${filename}`,
-            thumbnail: `/images/${filename}`,
-            title: `Photo ${i + 1}`,
-        }));
-    };
-
-    if (!gallery) {
+    if (loading) {
         return (
             <div style={{
                 minHeight: '100vh',
@@ -89,7 +64,67 @@ const PublicGallery = () => {
                 color: currentTheme.text,
                 fontFamily: '"Inter", sans-serif'
             }}>
-                <p>Loading gallery...</p>
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-current mx-auto mb-4"></div>
+                    <p>Loading gallery...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div style={{
+                minHeight: '100vh',
+                backgroundColor: currentTheme.bg,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: currentTheme.text,
+                fontFamily: '"Inter", sans-serif'
+            }}>
+                <div className="text-center">
+                    <p className="text-xl mb-4">😕 Gallery not found</p>
+                    <p className="text-sm opacity-70 mb-6">{error}</p>
+                    <button
+                        onClick={() => navigate('/')}
+                        className="px-6 py-2 rounded-lg font-medium"
+                        style={{
+                            backgroundColor: currentTheme.accent,
+                            color: '#fff'
+                        }}
+                    >
+                        Go Home
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    if (!gallery || !gallery.images || gallery.images.length === 0) {
+        return (
+            <div style={{
+                minHeight: '100vh',
+                backgroundColor: currentTheme.bg,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: currentTheme.text,
+                fontFamily: '"Inter", sans-serif'
+            }}>
+                <div className="text-center">
+                    <p className="text-xl mb-4">📷 No images in this gallery</p>
+                    <button
+                        onClick={() => navigate('/')}
+                        className="px-6 py-2 rounded-lg font-medium"
+                        style={{
+                            backgroundColor: currentTheme.accent,
+                            color: '#fff'
+                        }}
+                    >
+                        Go Home
+                    </button>
+                </div>
             </div>
         );
     }
@@ -126,6 +161,16 @@ const PublicGallery = () => {
                 <Home size={16}/>
                 <span className="hidden sm:inline">CURSORGALLERY</span>
             </button>
+
+            {/* Gallery Title (Optional) */}
+            <div className="fixed top-4 right-4 md:top-6 md:right-6 z-50 px-4 py-2 rounded-lg opacity-70"
+                 style={{
+                     backgroundColor: currentTheme.bgAlt,
+                     border: `1px solid ${currentTheme.border}`
+                 }}>
+                <p className="text-sm font-medium">{gallery.name}</p>
+                <p className="text-xs opacity-60">{gallery.images.length} photos</p>
+            </div>
 
             <CursorTrailGallery
                 images={gallery.images}
