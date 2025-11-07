@@ -29,7 +29,9 @@ function CursorTrailGallery({
                                 initialName = '',
                                 initialNameLink = '',
                                 initialEmail = '',
-                                galleryConfig = null
+                                galleryConfig = null,
+                                setPendingSaveState = null,   // for parent (optional)
+                                setSaveHandler = null         // for parent (optional)
                             }) {
     const [nextImage, setNextImage] = useState(0);
     const [placedImages, setPlacedImages] = useState([]);
@@ -607,6 +609,21 @@ function CursorTrailGallery({
         }
     }
 
+    // Expose pending/save state to parent when requested (mobile top bar)
+    // These effects keep the parent informed, if the parent passes corresponding setter functions.
+    // Mobile top bar can control its own save button.
+    useEffect(() => {
+        if (typeof setPendingSaveState === 'function') {
+            setPendingSaveState(pendingChanges);
+        }
+    }, [pendingChanges, setPendingSaveState]);
+
+    useEffect(() => {
+        if (typeof setSaveHandler === 'function') {
+            setSaveHandler(handleSaveAllChanges, isSaving);
+        }
+    }, [setSaveHandler, handleSaveAllChanges, isSaving]);
+
     // Keyboard navigation for lightbox
     useEffect(() => {
         if (!lightboxOpen) return;
@@ -750,57 +767,58 @@ function CursorTrailGallery({
                     </div>
                 )}
 
-                {/* Overlay message when image is selected */}
-                {selectedImage && editMode && (
-                    <div style={{
-                        position: 'absolute',
-                        top: 20,
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        background: 'rgba(168, 156, 142, 0.95)',
-                        color: '#0a0a0a',
-                        padding: '12px 24px',
-                        borderRadius: '8px',
-                        fontSize: 14,
-                        fontWeight: 'bold',
-                        zIndex: 90,
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
-                    }}>
-                        🎨 Editing mode - Trail paused
-                    </div>
-                )}
             </div>
 
             {/* Image Edit Panel - Shows when image is selected in edit mode */}
             {editMode && selectedImage && (
                 <div style={{
                     position: 'fixed',
-                    top: '50%',
-                    right: 20,
-                    transform: 'translateY(-50%)',
+                    ...(isMobile ? {
+                        // Mobile: Position dynamically to avoid covering the image, and above threshold bar
+                        bottom: '80px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        right: 'auto',
+                        top: 'auto'
+                    } : {
+                        // Desktop: Keep original right-side positioning
+                        top: '50%',
+                        right: 20,
+                        transform: 'translateY(-50%)',
+                        bottom: 'auto',
+                        left: 'auto'
+                    }),
                     background: currentTheme.controlsBg || 'rgba(0,0,0,0.9)',
-                    padding: '24px',
-                    borderRadius: '12px',
+                    padding: isMobile ? '12px 16px' : '24px',
+                    borderRadius: isMobile ? '10px' : '12px',
                     border: '2px solid #a89c8e',
                     zIndex: 100,
-                    minWidth: '240px',
+                    minWidth: isMobile ? '90%' : '240px',
+                    maxWidth: isMobile ? '90%' : '320px',
                     boxShadow: '0 8px 32px rgba(0,0,0,0.4)'
                 }}>
-                    <div style={{color: currentTheme.controlsText, marginBottom: 20, fontSize: 16, fontWeight: 'bold'}}>
-                        ✨ Edit Image
+                    <div style={{
+                        color: currentTheme.controlsText,
+                        marginBottom: isMobile ? 10 : 20,
+                        fontSize: isMobile ? 13 : 16,
+                        fontWeight: 'bold',
+                        textAlign: 'center'
+                    }}>
+                        Edit Image
                     </div>
 
                     {/* Scale Control */}
-                    <div style={{marginBottom: 20}}>
+                    <div style={{marginBottom: isMobile ? 10 : 20}}>
                         <div style={{
                             color: currentTheme.controlsText,
-                            fontSize: 12,
-                            marginBottom: 10,
-                            fontWeight: 'bold'
+                            fontSize: isMobile ? 11 : 12,
+                            marginBottom: 8,
+                            fontWeight: 'bold',
+                            textAlign: 'center'
                         }}>
                             Scale
                         </div>
-                        <div style={{display: 'flex', gap: 10, alignItems: 'center'}}>
+                        <div style={{display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'center'}}>
                             <button
                                 onClick={() => handleScaleChange(selectedImage.id, -0.1)}
                                 disabled={(imageTransforms[selectedImage.id]?.scale || 1.0) <= 0.5}
@@ -808,7 +826,7 @@ function CursorTrailGallery({
                                     background: 'rgba(255,255,255,0.15)',
                                     border: '1px solid rgba(255,255,255,0.3)',
                                     color: currentTheme.controlsText,
-                                    padding: '10px 14px',
+                                    padding: isMobile ? '10px 12px' : '10px 14px',
                                     borderRadius: '6px',
                                     cursor: 'pointer',
                                     fontSize: 16,
@@ -816,12 +834,12 @@ function CursorTrailGallery({
                                     transition: 'all 0.2s'
                                 }}
                             >
-                                <ZoomOut size={18}/>
+                                <ZoomOut size={isMobile ? 16 : 18}/>
                             </button>
                             <span style={{
                                 color: currentTheme.controlsText,
-                                fontSize: 16,
-                                minWidth: 60,
+                                fontSize: isMobile ? 14 : 16,
+                                minWidth: 50,
                                 textAlign: 'center',
                                 fontWeight: 'bold'
                             }}>
@@ -834,7 +852,7 @@ function CursorTrailGallery({
                                     background: 'rgba(255,255,255,0.15)',
                                     border: '1px solid rgba(255,255,255,0.3)',
                                     color: currentTheme.controlsText,
-                                    padding: '10px 14px',
+                                    padding: isMobile ? '10px 12px' : '10px 14px',
                                     borderRadius: '6px',
                                     cursor: 'pointer',
                                     fontSize: 16,
@@ -842,60 +860,68 @@ function CursorTrailGallery({
                                     transition: 'all 0.2s'
                                 }}
                             >
-                                <ZoomIn size={18}/>
+                                <ZoomIn size={isMobile ? 16 : 18}/>
                             </button>
                         </div>
                     </div>
 
-                    {/* Crop Button */}
-                    <div style={{marginBottom: 20}}>
+                    {/* Action Buttons - Side by side on mobile */}
+                    <div style={{
+                        display: 'flex',
+                        gap: isMobile ? 8 : 0,
+                        flexDirection: isMobile ? 'row' : 'column'
+                    }}>
+                        {/* Crop Button */}
                         <button
                             onClick={handleStartCrop}
                             style={{
-                                width: '100%',
+                                flex: isMobile ? 1 : 'none',
+                                width: isMobile ? 'auto' : '100%',
                                 background: 'rgba(255,255,255,0.15)',
                                 border: '1px solid rgba(255,255,255,0.3)',
                                 color: currentTheme.controlsText,
-                                padding: '12px',
+                                padding: isMobile ? '10px 8px' : '12px',
+                                marginBottom: isMobile ? 0 : 20,
                                 borderRadius: '6px',
                                 cursor: 'pointer',
                                 fontWeight: 'bold',
-                                fontSize: 13,
+                                fontSize: isMobile ? 11 : 13,
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                gap: 8,
+                                gap: isMobile ? 4 : 8,
                                 transition: 'all 0.2s'
                             }}
                         >
-                            <Crop size={16}/>
-                            CROP IMAGE
+                            <Crop size={isMobile ? 14 : 16}/>
+                            <span>{isMobile ? 'CROP' : 'CROP IMAGE'}</span>
+                        </button>
+
+                        {/* Done Button */}
+                        <button
+                            onClick={() => setSelectedImage(null)}
+                            style={{
+                                flex: isMobile ? 1 : 'none',
+                                width: isMobile ? 'auto' : '100%',
+                                background: '#a89c8e',
+                                border: 'none',
+                                color: '#0a0a0a',
+                                padding: isMobile ? '10px 8px' : '14px',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                fontWeight: 'bold',
+                                fontSize: isMobile ? 11 : 14,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: isMobile ? 4 : 8,
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            <Check size={isMobile ? 14 : 16}/>
+                            <span>{isMobile ? 'DONE' : 'DONE EDITING'}</span>
                         </button>
                     </div>
-
-                    {/* Done Button */}
-                    <button
-                        onClick={() => setSelectedImage(null)}
-                        style={{
-                            width: '100%',
-                            background: '#a89c8e',
-                            border: 'none',
-                            color: '#0a0a0a',
-                            padding: '14px',
-                            borderRadius: '8px',
-                            cursor: 'pointer',
-                            fontWeight: 'bold',
-                            fontSize: 14,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: 8,
-                            transition: 'all 0.2s'
-                        }}
-                    >
-                        <Check size={16}/>
-                        DONE EDITING
-                    </button>
                 </div>
             )}
 
@@ -945,13 +971,13 @@ function CursorTrailGallery({
                         }}>
                             <div style={{
                                 color: currentTheme.controlsText,
-                                fontSize: isMobile ? 13 : 14,
+                                fontSize: isMobile ? 14 : 14,
                                 fontWeight: 'bold',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: 5
                             }}>
-                                <Crop size={isMobile ? 13 : 14} style={{color: '#a89c8e'}}/>
+                                <Crop size={isMobile ? 14 : 14} style={{color: '#a89c8e'}}/>
                                 Crop Image
                             </div>
                             <button
@@ -970,7 +996,7 @@ function CursorTrailGallery({
                                 onMouseEnter={(e) => e.target.style.opacity = '1'}
                                 onMouseLeave={(e) => e.target.style.opacity = '0.7'}
                             >
-                                <X size={isMobile ? 16 : 18}/>
+                                <X size={isMobile ? 20 : 18}/>
                             </button>
                         </div>
 
@@ -980,7 +1006,7 @@ function CursorTrailGallery({
                             style={{
                                 position: 'relative',
                                 width: '100%',
-                                height: isMobile ? '32vh' : '320px',
+                                height: isMobile ? '40vh' : '320px',
                                 overflow: 'hidden',
                                 borderRadius: '4px',
                                 border: '1px solid rgba(255,255,255,0.1)',
@@ -997,7 +1023,7 @@ function CursorTrailGallery({
                                 ref={cropImageRef}
                                 style={{
                                     maxWidth: '100%',
-                                    maxHeight: isMobile ? '32vh' : '320px',
+                                    maxHeight: isMobile ? '40vh' : '320px',
                                     width: 'auto',
                                     height: 'auto',
                                     display: 'block',
@@ -1240,7 +1266,7 @@ function CursorTrailGallery({
                         {/* Instructions */}
                         <div style={{
                             color: currentTheme.controlsText,
-                            fontSize: isMobile ? 9 : 10,
+                            fontSize: isMobile ? 11 : 10,
                             textAlign: 'center',
                             opacity: 0.7,
                             fontStyle: 'italic',
@@ -1253,10 +1279,10 @@ function CursorTrailGallery({
                         {/* Action Buttons */}
                         <div style={{
                             display: 'flex',
-                            gap: isMobile ? 5 : 6,
+                            gap: isMobile ? 6 : 6,
                             justifyContent: 'flex-end',
                             flexShrink: 0,
-                            flexWrap: isMobile ? 'wrap' : 'nowrap'
+                            flexWrap: isMobile ? 'nowrap' : 'nowrap'
                         }}>
                             <button
                                 onClick={() => setShowCropModal(false)}
@@ -1264,13 +1290,13 @@ function CursorTrailGallery({
                                     background: 'transparent',
                                     border: '1px solid rgba(255,255,255,0.2)',
                                     color: currentTheme.controlsText,
-                                    padding: isMobile ? '7px 14px' : '8px 16px',
+                                    padding: isMobile ? '10px 18px' : '8px 16px',
                                     borderRadius: '5px',
                                     cursor: 'pointer',
-                                    fontSize: isMobile ? 10 : 12,
+                                    fontSize: isMobile ? 13 : 12,
                                     fontWeight: 'bold',
                                     transition: 'all 0.2s',
-                                    flex: isMobile ? '1' : 'none'
+                                    flex: isMobile ? '0 0 auto' : 'none'
                                 }}
                                 onMouseEnter={(e) => {
                                     e.target.style.borderColor = 'rgba(255,255,255,0.4)';
@@ -1289,17 +1315,17 @@ function CursorTrailGallery({
                                     background: '#a89c8e',
                                     border: 'none',
                                     color: '#0a0a0a',
-                                    padding: isMobile ? '7px 14px' : '8px 18px',
+                                    padding: isMobile ? '10px 18px' : '8px 18px',
                                     borderRadius: '5px',
                                     cursor: 'pointer',
-                                    fontSize: isMobile ? 10 : 12,
+                                    fontSize: isMobile ? 13 : 12,
                                     fontWeight: 'bold',
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: 5,
                                     transition: 'all 0.2s',
                                     boxShadow: '0 4px 12px rgba(168, 156, 142, 0.3)',
-                                    flex: isMobile ? '1' : 'none'
+                                    flex: isMobile ? '0 0 auto' : 'none'
                                 }}
                                 onMouseEnter={(e) => {
                                     e.target.style.background = '#b8ac9e';
@@ -1310,7 +1336,7 @@ function CursorTrailGallery({
                                     e.target.style.transform = 'translateY(0)';
                                 }}
                             >
-                                <Check size={isMobile ? 11 : 13}/>
+                                <Check size={isMobile ? 14 : 13}/>
                                 Apply Crop
                             </button>
                         </div>
@@ -1510,37 +1536,40 @@ function CursorTrailGallery({
                 </div>
             )}
 
-            {/* Save Changes Button - Fixed at bottom right */}
-            {editMode && pendingChanges && (
+            {/* Save Changes Button - Desktop: Below edit panel on right side */}
+            {editMode && pendingChanges && !isMobile && (
                 <button
                     onClick={handleSaveAllChanges}
                     disabled={isSaving}
                     style={{
                         position: 'fixed',
-                        bottom: 30,
-                        right: 30,
+                        top: 'calc(50% + 160px)',
+                        right: 20,
                         background: '#a89c8e',
                         border: 'none',
                         color: '#0a0a0a',
-                        padding: '16px 32px',
-                        borderRadius: '12px',
+                        padding: '14px',
+                        borderRadius: '8px',
                         cursor: isSaving ? 'wait' : 'pointer',
                         fontWeight: 'bold',
-                        fontSize: 16,
-                        zIndex: 1000,
+                        fontSize: 14,
+                        zIndex: 100,
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 10,
+                        justifyContent: 'center',
+                        gap: 8,
                         boxShadow: '0 8px 24px rgba(168, 156, 142, 0.4)',
                         opacity: isSaving ? 0.7 : 1,
-                        transition: 'all 0.3s',
-                        animation: 'pulse 2s infinite'
+                        transition: 'opacity 0.3s',
+                        width: '240px'
                     }}
                 >
-                    <Save size={20}/>
+                    <Save size={16}/>
                     {isSaving ? 'SAVING...' : 'SAVE ALL CHANGES'}
                 </button>
             )}
+
+            {/* Mobile save button was previously here, now handled by parent in top bar */}
 
             <style jsx>{`
                 @keyframes pulse {

@@ -1,20 +1,21 @@
 import {Link, useNavigate} from 'react-router-dom';
 import {useState, useEffect, useRef} from 'react';
-import {ArrowRight, MoveRight, Moon, Sun, Menu, X, Eye} from 'lucide-react';
-import {motion, useScroll, useTransform, useMotionValue, useSpring} from 'framer-motion';
+import {ArrowRight, Eye} from 'lucide-react';
+import {motion, useScroll, useTransform, useMotionValue, useSpring, AnimatePresence} from 'framer-motion';
 import CursorTrailGallery from '../components/gallery/CursorTrailGallery';
 import {useTheme} from '../context/ThemeContext';
 import useAuthStore from '../store/authStore';
+import Navbar from '../components/layout/Navbar';
 
 const LandingPage = () => {
     const navigate = useNavigate();
-    const {isDark, setIsDark, currentTheme} = useTheme();
+    const {isDark, currentTheme} = useTheme();
     const {isAuthenticated, user} = useAuthStore();
     const [cursorPos, setCursorPos] = useState({x: 0, y: 0});
-    const [scrolled, setScrolled] = useState(false);
-    const [navbarVisible, setNavbarVisible] = useState(true);
-    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
+    const [showNavbar, setShowNavbar] = useState(true);
+    const [canvasInteracted, setCanvasInteracted] = useState(false);
+    const lastNavbarState = useRef(true);
     const heroRef = useRef(null);
     const demoSectionRef = useRef(null);
     const canvasRef = useRef(null);
@@ -50,41 +51,47 @@ const LandingPage = () => {
         return () => window.removeEventListener('mousemove', handleMouseMove);
     }, [isMobile]);
 
-    // Track scroll for navbar
+    // Navbar auto-hide when demo section is in view (desktop only)
     useEffect(() => {
         const handleScroll = () => {
-            setScrolled(window.scrollY > 100);
-        };
-        window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
+            // Skip navbar auto-hide on mobile
+            if (isMobile) {
+                if (!showNavbar) setShowNavbar(true);
+                return;
+            }
 
-    // Track scroll for navbar hide/show in demo section
-    useEffect(() => {
-        const handleScroll = () => {
-            if (canvasRef.current) {
-                const rect = canvasRef.current.getBoundingClientRect();
-                const windowHeight = window.innerHeight;
-                const canvasHeight = rect.height;
-                const canvasTop = rect.top;
-                const canvasBottom = rect.bottom;
+            if (!canvasRef.current) return;
 
-                // Calculate how much of canvas is visible
-                const visibleHeight = Math.min(canvasBottom, windowHeight) - Math.max(canvasTop, 0);
-                const visiblePercentage = visibleHeight / canvasHeight;
+            const canvas = canvasRef.current;
+            const rect = canvas.getBoundingClientRect();
+            const windowHeight = window.innerHeight;
 
-                // Hide navbar when canvas is 80% visible
-                // Show navbar when scrolled past canvas middle
-                if (visiblePercentage >= 0.8 && canvasTop <= windowHeight * 0.2) {
-                    setNavbarVisible(false);
-                } else if (canvasTop > windowHeight * 0.2 || canvasBottom < windowHeight * 0.5) {
-                    setNavbarVisible(true);
-                }
+            // Calculate how much of the canvas is visible in the viewport
+            const canvasTop = Math.max(0, rect.top);
+            const canvasBottom = Math.min(windowHeight, rect.bottom);
+            const visibleHeight = Math.max(0, canvasBottom - canvasTop);
+            const canvasVisiblePercentage = (visibleHeight / windowHeight) * 100;
+
+            // Simple symmetrical logic: hide when canvas is dominant (75%+), show otherwise
+            const shouldShowNavbar = canvasVisiblePercentage < 75;
+
+            // Only update if state actually changed
+            if (shouldShowNavbar !== lastNavbarState.current) {
+                lastNavbarState.current = shouldShowNavbar;
+                setShowNavbar(shouldShowNavbar);
+            }
+
+            // Reset canvas interaction when scrolling away from canvas
+            if (shouldShowNavbar && canvasInteracted) {
+                setCanvasInteracted(false);
             }
         };
-        window.addEventListener('scroll', handleScroll);
+
+        window.addEventListener('scroll', handleScroll, {passive: true});
+        handleScroll(); // Check initial state
+
         return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
+    }, [canvasInteracted, isMobile, showNavbar]);
 
     // Demo gallery images (subset for performance)
     const demoImages = [
@@ -147,179 +154,56 @@ const LandingPage = () => {
                 />
             )}
 
-            {/* Glassmorphism Navigation Bar - Always visible, changes on scroll */}
-            <motion.nav
-                className="fixed top-0 left-0 right-0 z-50 px-3 sm:px-4 md:px-6 lg:px-12 py-2 sm:py-3 md:py-4"
-                style={{cursor: 'auto'}}
-            >
-                <motion.div
-                    initial={{opacity: 0, y: -20}}
-                    animate={{opacity: 1, y: navbarVisible ? 0 : -100}}
-                    transition={{duration: 0.4, ease: "easeInOut"}}
-                    className="max-w-[1400px] mx-auto flex items-center justify-between px-3 sm:px-4 md:px-6 py-2 sm:py-3 border transition-all duration-300"
-                    style={{
-                        background: scrolled ? currentTheme.navBg : currentTheme.navBgTransparent,
-                        borderColor: scrolled ? currentTheme.borderAlt : currentTheme.border,
-                        boxShadow: scrolled ? `0 8px 32px 0 ${isDark ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.1)'}` : 'none',
-                        backdropFilter: 'blur(10px)',
-                    }}
-                >
-                    {/* Logo */}
-                    <Link to="/" className="flex items-center gap-2 md:gap-3">
-                        <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full transition-colors duration-300"
-                             style={{backgroundColor: currentTheme.text}}></div>
-                        <span
-                            className="font-light text-[9px] sm:text-xs md:text-sm tracking-[0.15em] sm:tracking-[0.2em] md:tracking-[0.3em] transition-colors duration-300"
-                              style={{color: currentTheme.text}}>
-                            CURSOR GALLERY
-                        </span>
-                    </Link>
-
-                    {/* Desktop Nav Links */}
-                    <div className="hidden md:flex items-center gap-4 lg:gap-8">
-                        <Link
-                            to={isAuthenticated ? "/settings" : "/login"}
-                            className="text-xs tracking-[0.2em] transition-colors duration-300"
-                            style={{color: currentTheme.textDim}}
-                            onMouseEnter={(e) => e.target.style.color = currentTheme.text}
-                            onMouseLeave={(e) => e.target.style.color = currentTheme.textDim}
-                        >
-                            {isAuthenticated ? "SETTINGS" : "LOGIN"}
-                        </Link>
-
-                        {/* Theme Toggle */}
-                        <button
-                            onClick={() => setIsDark(!isDark)}
-                            className="p-2 rounded-full transition-all duration-300 hover:scale-110"
-                            style={{
-                                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-                                color: currentTheme.text
-                            }}
-                            aria-label="Toggle theme"
-                        >
-                            {isDark ? <Sun className="w-4 h-4"/> : <Moon className="w-4 h-4"/>}
-                        </button>
-
-                        <Link
-                            to={isAuthenticated ? "/dashboard" : "/create"}
-                            className="px-4 lg:px-6 py-2 text-xs tracking-[0.2em] font-medium transition-all duration-300"
-                            style={{
-                                backgroundColor: currentTheme.accent,
-                                color: isDark ? '#0a0a0a' : '#f5f3ef'
-                            }}
-                            onMouseEnter={(e) => e.target.style.backgroundColor = currentTheme.accentHover}
-                            onMouseLeave={(e) => e.target.style.backgroundColor = currentTheme.accent}
-                        >
-                            {isAuthenticated ? "DASHBOARD" : "START"}
-                        </Link>
-                    </div>
-
-                    {/* Mobile Menu Button */}
-                    <div className="flex md:hidden items-center gap-2 sm:gap-3">
-                        <button
-                            onClick={() => setIsDark(!isDark)}
-                            className="p-1.5 sm:p-2 rounded-full transition-all duration-300"
-                            style={{
-                                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-                                color: currentTheme.text
-                            }}
-                            aria-label="Toggle theme"
-                        >
-                            {isDark ? <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4"/> :
-                                <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4"/>}
-                        </button>
-                        <button
-                            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                            className="p-1.5 sm:p-2"
-                            style={{color: currentTheme.text}}
-                            aria-label="Toggle menu"
-                        >
-                            {mobileMenuOpen ? <X className="w-4 h-4 sm:w-5 sm:h-5"/> :
-                                <Menu className="w-4 h-4 sm:w-5 sm:h-5"/>}
-                        </button>
-                    </div>
-                </motion.div>
-
-                {/* Mobile Menu */}
-                {mobileMenuOpen && (
-                    <motion.div
-                        initial={{opacity: 0, y: -20}}
-                        animate={{opacity: 1, y: 0}}
-                        exit={{opacity: 0, y: -20}}
-                        className="md:hidden mt-2 mx-3 sm:mx-4 border transition-all duration-300"
-                        style={{
-                            background: currentTheme.navBg,
-                            borderColor: currentTheme.borderAlt,
-                            backdropFilter: 'blur(10px)',
-                        }}
-                    >
-                        <div className="flex flex-col p-3 sm:p-4 gap-3 sm:gap-4">
-                            <Link
-                                to={isAuthenticated ? "/settings" : "/login"}
-                                className="text-xs tracking-[0.2em] py-2 transition-colors duration-300"
-                                style={{color: currentTheme.textDim}}
-                                onClick={() => setMobileMenuOpen(false)}
-                            >
-                                {isAuthenticated ? "SETTINGS" : "LOGIN"}
-                            </Link>
-                            <Link
-                                to={isAuthenticated ? "/dashboard" : "/create"}
-                                className="px-4 py-2.5 sm:py-3 text-xs tracking-[0.2em] font-medium transition-all duration-300 text-center"
-                                style={{
-                                    backgroundColor: currentTheme.accent,
-                                    color: isDark ? '#0a0a0a' : '#f5f3ef'
-                                }}
-                                onClick={() => setMobileMenuOpen(false)}
-                            >
-                                {isAuthenticated ? "DASHBOARD" : "START"}
-                            </Link>
-                        </div>
-                    </motion.div>
-                )}
-            </motion.nav>
+            {/* Use consistent Navbar component */}
+            <AnimatePresence mode="wait">
+                {showNavbar && <Navbar key="navbar"/>}
+            </AnimatePresence>
 
             {/* Hero Section */}
             <section
-                className="relative min-h-screen px-3 sm:px-4 md:px-6 lg:px-12 pt-16 sm:pt-20 md:pt-24 pb-8 sm:pb-12 md:pb-20 z-20 flex items-center transition-colors duration-500"
-                style={{backgroundColor: currentTheme.bg}}>
+                className="relative min-h-screen px-4 sm:px-6 md:px-8 lg:px-12 pt-20 sm:pt-24 md:pt-28 pb-12 sm:pb-16 md:pb-20 z-20 flex items-center transition-colors duration-500"
+                style={{backgroundColor: currentTheme.bg}}
+                ref={heroRef}>
                 <div className="max-w-[1400px] mx-auto w-full">
-                    {/* Main heading - Responsive text sizes */}
+                    {/* Main heading - Larger on mobile, original size on desktop */}
                     <motion.h1
                         initial={{opacity: 0, y: 30}}
                         animate={{opacity: 1, y: 0}}
                         transition={{duration: 0.8}}
-                        className="text-[15vw] sm:text-[13vw] md:text-[10vw] lg:text-[8.5vw] font-black leading-[0.85] tracking-tighter mb-6 sm:mb-8 md:mb-12 transition-colors duration-500"
+                        className="text-[16vw] sm:text-[13vw] md:text-[10vw] lg:text-[8.5vw] font-black leading-[0.9] sm:leading-[0.85] tracking-tighter mb-6 sm:mb-8 md:mb-10 transition-colors duration-500"
                         style={{fontFamily: 'Arial Black, sans-serif', color: currentTheme.text}}
                     >
                         Your Portfolio, Reimagined.
                     </motion.h1>
 
-                    {/* Description text overlaying */}
+                    {/* Description text - Larger on mobile, original on desktop */}
                     <motion.div
                         initial={{opacity: 0, y: 20}}
                         animate={{opacity: 1, y: 0}}
                         transition={{duration: 0.8, delay: 0.3}}
-                        className="max-w-md mb-6 sm:mb-8 md:mb-12"
+                        className="max-w-xl mb-8 sm:mb-10 md:mb-12"
                     >
-                        <p className="text-xs sm:text-sm md:text-base lg:text-lg leading-relaxed transition-colors duration-500"
+                        <p className="text-sm sm:text-sm md:text-base lg:text-lg leading-relaxed transition-colors duration-500"
                            style={{fontFamily: 'Georgia, serif', color: currentTheme.textMuted}}>
-                            Create an interactive portfolio that moves with your cursor. Transform your work into
-                            a dynamic, memorable experience. Share it like it's your own website.
+                            {isMobile
+                                ? 'Create an interactive portfolio that responds to your touch. Transform your work into a dynamic, memorable experience.'
+                                : 'Create an interactive portfolio that moves with your cursor. Transform your work into a dynamic, memorable experience. Share it like it\'s your own website.'
+                            }
                         </p>
                     </motion.div>
 
-                    {/* CTA buttons - Responsive */}
+                    {/* CTA buttons - Centered on mobile, larger on mobile */}
                     <motion.div
                         initial={{opacity: 0}}
                         animate={{opacity: 1}}
                         transition={{duration: 0.8, delay: 0.6}}
-                        className="flex flex-col sm:flex-row flex-wrap gap-2.5 sm:gap-3 md:gap-4"
+                        className="flex justify-center sm:justify-start"
                     >
                         {isAuthenticated ? (
                             // Logged-in user CTAs
                             <Link
                                 to="/dashboard"
-                                className="px-5 sm:px-6 md:px-8 py-2.5 sm:py-3 md:py-4 font-bold text-[10px] sm:text-xs md:text-sm tracking-wide transition-all duration-300 text-center"
+                                className="px-8 sm:px-6 md:px-8 py-3.5 sm:py-3 md:py-4 font-bold text-sm sm:text-xs md:text-sm tracking-wide transition-all duration-300 text-center"
                                 style={{
                                     backgroundColor: currentTheme.accent,
                                     color: isDark ? '#0a0a0a' : '#f5f3ef'
@@ -330,39 +214,19 @@ const LandingPage = () => {
                                 GO TO DASHBOARD
                             </Link>
                         ) : (
-                            // Logged-out user CTAs
-                            <>
-                                <Link
-                                    to="/create"
-                                    className="px-5 sm:px-6 md:px-8 py-2.5 sm:py-3 md:py-4 font-bold text-[10px] sm:text-xs md:text-sm tracking-wide transition-all duration-300 text-center"
-                                    style={{
-                                        backgroundColor: currentTheme.accent,
-                                        color: isDark ? '#0a0a0a' : '#f5f3ef'
-                                    }}
-                                    onMouseEnter={(e) => e.target.style.backgroundColor = currentTheme.accentHover}
-                                    onMouseLeave={(e) => e.target.style.backgroundColor = currentTheme.accent}
-                                >
-                                    GET STARTED
-                                </Link>
-                                <Link
-                                    to="/signup"
-                                    className="px-5 sm:px-6 md:px-8 py-2.5 sm:py-3 md:py-4 border-2 font-bold text-[10px] sm:text-xs md:text-sm tracking-wide transition-all duration-300 text-center"
-                                    style={{
-                                        borderColor: currentTheme.accent,
-                                        color: currentTheme.accent,
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.target.style.backgroundColor = currentTheme.accent;
-                                        e.target.style.color = isDark ? '#0a0a0a' : '#f5f3ef';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.target.style.backgroundColor = 'transparent';
-                                        e.target.style.color = currentTheme.accent;
-                                    }}
-                                >
-                                    SIGN UP FREE
-                                </Link>
-                            </>
+                            // Logged-out user CTA - Only Get Started button
+                            <Link
+                                to="/create"
+                                className="px-8 sm:px-6 md:px-8 py-3.5 sm:py-3 md:py-4 font-bold text-sm sm:text-xs md:text-sm tracking-wide transition-all duration-300 text-center"
+                                style={{
+                                    backgroundColor: currentTheme.accent,
+                                    color: isDark ? '#0a0a0a' : '#f5f3ef'
+                                }}
+                                onMouseEnter={(e) => e.target.style.backgroundColor = currentTheme.accentHover}
+                                onMouseLeave={(e) => e.target.style.backgroundColor = currentTheme.accent}
+                            >
+                                GET STARTED
+                            </Link>
                         )}
                     </motion.div>
                 </div>
@@ -370,15 +234,16 @@ const LandingPage = () => {
 
             {/* How it works - Responsive */}
             <section
-                className="py-12 sm:py-16 md:py-24 lg:py-32 px-3 sm:px-4 md:px-6 lg:px-12 z-20 transition-colors duration-500"
-                     style={{backgroundColor: currentTheme.bgAlt}}>
+                className="py-16 sm:py-16 md:py-24 lg:py-32 px-4 sm:px-6 md:px-8 lg:px-12 z-20 transition-colors duration-500"
+                style={{backgroundColor: currentTheme.bgAlt}}>
                 <div className="max-w-[1400px] mx-auto">
-                    <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-black mb-8 sm:mb-12 md:mb-20 transition-colors duration-500"
+                    <h2 className="text-4xl sm:text-4xl md:text-5xl lg:text-7xl font-black mb-10 sm:mb-12 md:mb-20 transition-colors duration-500"
                         style={{color: currentTheme.text}}>
                         How it works
                     </h2>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8 md:gap-12 lg:gap-16">
+                    {/* Desktop Grid - Hidden on mobile */}
+                    <div className="hidden sm:grid grid-cols-2 md:grid-cols-3 gap-8 md:gap-12 lg:gap-16">
                         {[
                             {
                                 num: '01',
@@ -404,14 +269,113 @@ const LandingPage = () => {
                                 viewport={{once: true}}
                             >
                                 <div
-                                    className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black mb-2 sm:mb-3 md:mb-4 transition-colors duration-500"
-                                     style={{color: currentTheme.text, opacity: isDark ? 0.1 : 0.2}}>{item.num}</div>
-                                <h3 className="text-lg sm:text-xl md:text-2xl font-black mb-1.5 sm:mb-2 md:mb-3 transition-colors duration-500"
+                                    className="text-6xl md:text-7xl lg:text-8xl font-black mb-3 md:mb-4 transition-colors duration-500"
+                                    style={{color: currentTheme.text, opacity: isDark ? 0.1 : 0.2}}>{item.num}</div>
+                                <h3 className="text-xl md:text-2xl font-black mb-2 md:mb-3 transition-colors duration-500"
                                     style={{color: currentTheme.text}}>{item.title}</h3>
-                                <p className="text-xs sm:text-sm md:text-base leading-relaxed opacity-70 transition-colors duration-500"
+                                <p className="text-sm md:text-base leading-relaxed opacity-70 transition-colors duration-500"
                                    style={{fontFamily: 'Georgia, serif', color: currentTheme.textMuted}}>
                                     {item.desc}
                                 </p>
+                            </motion.div>
+                        ))}
+                    </div>
+
+                    {/* Mobile Zigzag Layout - Only visible on mobile */}
+                    <div className="sm:hidden space-y-8">
+                        {[
+                            {
+                                num: '01',
+                                title: 'Upload',
+                                desc: 'Add your best work. Start with at least one image.'
+                            },
+                            {
+                                num: '02',
+                                title: 'Customize',
+                                desc: 'Fine-tune touch sensitivity and visual mood. Make it yours.'
+                            },
+                            {
+                                num: '03',
+                                title: 'Share',
+                                desc: 'One link. Your interactive portfolio, ready to impress.'
+                            }
+                        ].map((item, idx) => (
+                            <motion.div
+                                key={idx}
+                                initial={{opacity: 0, x: idx % 2 === 0 ? -30 : 30}}
+                                whileInView={{opacity: 1, x: 0}}
+                                transition={{duration: 0.6, delay: idx * 0.15}}
+                                viewport={{once: true}}
+                                className="relative"
+                            >
+                                {/* Connecting line between items */}
+                                {idx < 2 && (
+                                    <div
+                                        className="absolute w-px h-8 -bottom-8"
+                                        style={{
+                                            backgroundColor: currentTheme.accent,
+                                            opacity: 0.3,
+                                            left: '50%',
+                                            transform: 'translateX(-50%)',
+                                        }}
+                                    />
+                                )}
+
+                                {/* Minimal card design */}
+                                <div
+                                    className="relative px-6 py-8 border transition-all duration-300"
+                                    style={{
+                                        backgroundColor: currentTheme.bg,
+                                        borderColor: currentTheme.border,
+                                        marginLeft: idx % 2 === 0 ? '0' : '12%',
+                                        marginRight: idx % 2 === 0 ? '12%' : '0',
+                                    }}
+                                >
+                                    {/* Large decorative number background */}
+                                    <div
+                                        className="absolute font-black pointer-events-none select-none"
+                                        style={{
+                                            fontSize: '8rem',
+                                            lineHeight: '1',
+                                            color: currentTheme.accent,
+                                            opacity: 0.08,
+                                            top: '-0.5rem',
+                                            [idx % 2 === 0 ? 'left' : 'right']: '1rem',
+                                        }}
+                                    >
+                                        {item.num}
+                                    </div>
+
+                                    {/* Content with clean spacing */}
+                                    <div className="relative z-10">
+                                        <h3
+                                            className="text-2xl font-black mb-3 tracking-tight transition-colors duration-500"
+                                            style={{color: currentTheme.text}}
+                                        >
+                                            {item.title}
+                                        </h3>
+                                        <p
+                                            className="text-base leading-relaxed transition-colors duration-500"
+                                            style={{
+                                                fontFamily: 'Georgia, serif',
+                                                color: currentTheme.textMuted,
+                                            }}
+                                        >
+                                            {item.desc}
+                                        </p>
+                                    </div>
+
+                                    {/* Subtle accent indicator at bottom */}
+                                    <div
+                                        className="absolute bottom-0 h-0.5"
+                                        style={{
+                                            backgroundColor: currentTheme.accent,
+                                            width: '40%',
+                                            [idx % 2 === 0 ? 'left' : 'right']: 0,
+                                            opacity: 0.4,
+                                        }}
+                                    />
+                                </div>
                             </motion.div>
                         ))}
                     </div>
@@ -420,9 +384,9 @@ const LandingPage = () => {
 
             {/* Live Demo Section - Responsive */}
             <section
-                className="py-12 sm:py-16 md:py-24 lg:py-32 px-3 sm:px-4 md:px-6 lg:px-12 z-20 transition-colors duration-500"
-                     style={{backgroundColor: currentTheme.bg}}
-                     ref={demoSectionRef}>
+                className="py-16 sm:py-16 md:py-24 lg:py-32 px-4 sm:px-6 md:px-8 lg:px-12 z-20 transition-colors duration-500"
+                style={{backgroundColor: currentTheme.bg}}
+                ref={demoSectionRef}>
                 <div className="max-w-[1400px] mx-auto">
                     {/* Header */}
                     <motion.div
@@ -430,14 +394,14 @@ const LandingPage = () => {
                         whileInView={{opacity: 1, y: 0}}
                         transition={{duration: 0.8}}
                         viewport={{once: true}}
-                        className="mb-6 sm:mb-8 md:mb-16 text-center"
+                        className="mb-8 sm:mb-8 md:mb-16 text-center"
                     >
-                        <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-7xl font-black mb-3 sm:mb-4 md:mb-6 transition-colors duration-500"
+                        <h2 className="text-3xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-7xl font-black mb-4 sm:mb-4 md:mb-6 transition-colors duration-500"
                             style={{fontFamily: 'Arial Black, sans-serif', color: currentTheme.text}}>
                             EXPERIENCE IT
                         </h2>
-                        <p className="text-[9px] sm:text-xs tracking-wider transition-colors duration-500"
-                           style={{color: currentTheme.textDim}}>
+                        <p className="text-xs sm:text-xs md:text-sm tracking-wider transition-colors duration-500"
+                           style={{color: currentTheme.textMuted}}>
                             {isMobile ? 'Drag your finger across the canvas' : 'Move across the canvas below'}
                         </p>
                     </motion.div>
@@ -452,16 +416,16 @@ const LandingPage = () => {
                     >
                         {/* Subtle corner decorations */}
                         <div
-                            className="absolute -top-1.5 sm:-top-2 -left-1.5 sm:-left-2 w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 border-l-2 border-t-2 z-10 transition-colors duration-500"
+                            className="absolute -top-1.5 sm:-top-2 -left-1.5 sm:-left-2 w-6 h-6 sm:w-6 sm:h-6 md:w-8 md:h-8 border-l-2 border-t-2 z-10 transition-colors duration-500"
                             style={{borderColor: currentTheme.borderAlt}}></div>
                         <div
-                            className="absolute -top-1.5 sm:-top-2 -right-1.5 sm:-right-2 w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 border-r-2 border-t-2 z-10 transition-colors duration-500"
+                            className="absolute -top-1.5 sm:-top-2 -right-1.5 sm:-right-2 w-6 h-6 sm:w-6 sm:h-6 md:w-8 md:h-8 border-r-2 border-t-2 z-10 transition-colors duration-500"
                             style={{borderColor: currentTheme.borderAlt}}></div>
                         <div
-                            className="absolute -bottom-1.5 sm:-bottom-2 -left-1.5 sm:-left-2 w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 border-l-2 border-b-2 z-10 transition-colors duration-500"
+                            className="absolute -bottom-1.5 sm:-bottom-2 -left-1.5 sm:-left-2 w-6 h-6 sm:w-6 sm:h-6 md:w-8 md:h-8 border-l-2 border-b-2 z-10 transition-colors duration-500"
                             style={{borderColor: currentTheme.borderAlt}}></div>
                         <div
-                            className="absolute -bottom-1.5 sm:-bottom-2 -right-1.5 sm:-right-2 w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 border-r-2 border-b-2 z-10 transition-colors duration-500"
+                            className="absolute -bottom-1.5 sm:-bottom-2 -right-1.5 sm:-right-2 w-6 h-6 sm:w-6 sm:h-6 md:w-8 md:h-8 border-r-2 border-b-2 z-10 transition-colors duration-500"
                             style={{borderColor: currentTheme.borderAlt}}></div>
 
                         {/* Demo gallery - Responsive height */}
@@ -496,8 +460,8 @@ const LandingPage = () => {
                         viewport={{once: true}}
                         className="mt-6 sm:mt-8 md:mt-12 text-center"
                     >
-                        <p className="text-[9px] sm:text-xs tracking-wider transition-colors duration-500"
-                           style={{color: currentTheme.textDim}}>
+                        <p className="text-xs sm:text-xs md:text-sm tracking-wider transition-colors duration-500"
+                           style={{color: currentTheme.textMuted}}>
                             {isMobile ? 'Touch-driven image trail · Adjustable sensitivity' : 'Cursor-driven image trail · Adjustable sensitivity'}
                         </p>
                     </motion.div>
@@ -506,8 +470,8 @@ const LandingPage = () => {
 
             {/* Final CTA Section - Responsive */}
             <section
-                className="py-12 sm:py-16 md:py-24 lg:py-32 px-3 sm:px-4 md:px-6 lg:px-12 z-20 transition-colors duration-500"
-                     style={{backgroundColor: currentTheme.bgAlt}}>
+                className="py-16 sm:py-16 md:py-24 lg:py-32 px-4 sm:px-6 md:px-8 lg:px-12 z-20 transition-colors duration-500"
+                style={{backgroundColor: currentTheme.bgAlt}}>
                 <div className="max-w-[1400px] mx-auto text-center">
                     <motion.div
                         initial={{opacity: 0, y: 20}}
@@ -518,18 +482,18 @@ const LandingPage = () => {
                         {isAuthenticated ? (
                             // Logged-in user final CTA
                             <>
-                                <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-7xl font-black mb-3 sm:mb-4 md:mb-6 transition-colors duration-500"
+                                <h2 className="text-3xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-7xl font-black mb-4 sm:mb-4 md:mb-6 transition-colors duration-500"
                                     style={{fontFamily: 'Arial Black, sans-serif', color: currentTheme.text}}>
                                     Welcome Back{user?.name ? `, ${user.name.split(' ')[0]}` : ''}
                                 </h2>
-                                <p className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl mb-6 sm:mb-8 md:mb-12 max-w-2xl mx-auto transition-colors duration-500"
+                                <p className="text-sm sm:text-sm md:text-base lg:text-lg xl:text-xl mb-8 sm:mb-8 md:mb-12 max-w-3xl mx-auto transition-colors duration-500"
                                    style={{fontFamily: 'Georgia, serif', color: currentTheme.textMuted}}>
                                     Ready to polish your portfolio? Manage your gallery, explore new features, or refine
                                     your interactive experience.
                                 </p>
                                 <Link
                                     to="/dashboard"
-                                    className="inline-flex items-center gap-2 md:gap-3 px-5 sm:px-6 md:px-8 py-2.5 sm:py-3 md:py-4 font-bold text-xs sm:text-sm md:text-lg transition-all duration-300"
+                                    className="inline-flex items-center gap-2 md:gap-3 px-8 sm:px-6 md:px-8 py-3.5 sm:py-3 md:py-4 font-bold text-sm sm:text-xs md:text-sm tracking-wide transition-all duration-300"
                                     style={{
                                         backgroundColor: currentTheme.accent,
                                         color: isDark ? '#0a0a0a' : '#f5f3ef'
@@ -537,20 +501,20 @@ const LandingPage = () => {
                                     onMouseEnter={(e) => e.target.style.backgroundColor = currentTheme.accentHover}
                                     onMouseLeave={(e) => e.target.style.backgroundColor = currentTheme.accent}
                                 >
-                                    <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5"/>
+                                    <Eye className="w-4 h-4 sm:w-4 sm:h-4 md:w-5 md:h-5"/>
                                     GO TO DASHBOARD
                                 </Link>
                             </>
                         ) : (
                             // Logged-out user final CTA
                             <>
-                                <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-8xl font-black mb-6 sm:mb-8 md:mb-12 transition-colors duration-500"
+                                <h2 className="text-4xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-8xl font-black mb-8 sm:mb-8 md:mb-12 transition-colors duration-500"
                                     style={{fontFamily: 'Arial Black, sans-serif', color: currentTheme.text}}>
                                     START NOW
                                 </h2>
                                 <Link
                                     to="/create"
-                                    className="inline-flex items-center gap-2 md:gap-3 px-5 sm:px-6 md:px-8 py-2.5 sm:py-3 md:py-4 font-bold text-xs sm:text-sm md:text-lg transition-all duration-300"
+                                    className="inline-flex items-center gap-2 md:gap-3 px-8 sm:px-6 md:px-8 py-3.5 sm:py-3 md:py-4 font-bold text-sm sm:text-xs md:text-sm tracking-wide transition-all duration-300"
                                     style={{
                                         backgroundColor: currentTheme.accent,
                                         color: isDark ? '#0a0a0a' : '#f5f3ef'
@@ -559,7 +523,7 @@ const LandingPage = () => {
                                     onMouseLeave={(e) => e.target.style.backgroundColor = currentTheme.accent}
                                 >
                                     CREATE YOUR PORTFOLIO
-                                    <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5"/>
+                                    <ArrowRight className="w-4 h-4 sm:w-4 sm:h-4 md:w-5 md:h-5"/>
                                 </Link>
                             </>
                         )}
@@ -569,16 +533,16 @@ const LandingPage = () => {
 
             {/* Footer - Responsive */}
             <footer
-                className="py-4 sm:py-6 md:py-8 px-3 sm:px-4 md:px-6 lg:px-12 z-20 border-t transition-all duration-500"
-                    style={{backgroundColor: currentTheme.bg, borderColor: currentTheme.border}}>
+                className="py-6 sm:py-6 md:py-8 px-4 sm:px-6 md:px-8 lg:px-12 z-20 border-t transition-all duration-500"
+                style={{backgroundColor: currentTheme.bg, borderColor: currentTheme.border}}>
                 <div
-                    className="max-w-[1000px] mx-auto flex flex-col sm:flex-row justify-between items-center gap-2 sm:gap-3 md:gap-4">
+                    className="max-w-[1000px] mx-auto flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-3 md:gap-4">
                     <div
-                        className="text-[8px] sm:text-[10px] md:text-xs font-bold tracking-[0.15em] sm:tracking-[0.2em] transition-colors duration-500"
-                         style={{color: currentTheme.text}}>
+                        className="text-[9px] sm:text-[10px] md:text-xs font-bold tracking-[0.15em] sm:tracking-[0.2em] transition-colors duration-500"
+                        style={{color: currentTheme.text}}>
                         CURSOR GALLERY &copy; 2025
                     </div>
-                    <div className="text-[8px] sm:text-[10px] md:text-xs opacity-50 transition-colors duration-500"
+                    <div className="text-[9px] sm:text-[10px] md:text-xs opacity-50 transition-colors duration-500"
                          style={{color: currentTheme.textMuted}}>
                         INTERACTIVE PORTFOLIO SYSTEM
                     </div>

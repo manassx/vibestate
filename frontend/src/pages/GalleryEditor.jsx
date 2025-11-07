@@ -13,6 +13,19 @@ const GalleryEditor = () => {
     const [gallery, setGallery] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [pendingChanges, setPendingChanges] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveHandler, setSaveHandler] = useState(null);
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth <= 768);
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     useEffect(() => {
         loadGallery();
@@ -113,7 +126,7 @@ const GalleryEditor = () => {
                 fontFamily: '"Inter", sans-serif'
             }}>
                 <div className="text-center">
-                    <p className="text-xl mb-4">😕 Failed to load portfolio</p>
+                    <p className="text-xl mb-4">Failed to load portfolio</p>
                     <p className="text-sm opacity-70 mb-6">{error}</p>
                     <button
                         onClick={() => navigate('/dashboard')}
@@ -142,7 +155,7 @@ const GalleryEditor = () => {
                 fontFamily: '"Inter", sans-serif'
             }}>
                 <div className="text-center">
-                    <p className="text-xl mb-4">📷 No images in your portfolio yet</p>
+                    <p className="text-xl mb-4">No images in your portfolio yet</p>
                     <p className="text-sm opacity-70 mb-6">Add some images to get started</p>
                     <button
                         onClick={() => navigate('/dashboard')}
@@ -170,83 +183,158 @@ const GalleryEditor = () => {
             position: 'relative',
             overflow: 'hidden'
         }}>
-            {/* Floating Exit Button */}
-            <button
-                onClick={() => navigate('/dashboard')}
-                className="fixed top-4 left-4 md:top-6 md:left-6 z-50 flex items-center gap-2 px-3 py-2 md:px-4 md:py-2 rounded-lg font-bold text-xs tracking-wide transition-all duration-300 opacity-70 hover:opacity-100"
-                style={{
-                    backgroundColor: currentTheme.bgAlt,
-                    color: currentTheme.text,
-                    border: `1px solid ${currentTheme.border}`
-                }}
-                onMouseEnter={(e) => {
-                    e.target.style.backgroundColor = currentTheme.bg;
-                    e.target.style.borderColor = currentTheme.accent;
-                }}
-                onMouseLeave={(e) => {
-                    e.target.style.backgroundColor = currentTheme.bgAlt;
-                    e.target.style.borderColor = currentTheme.border;
-                }}
-            >
-                <ArrowLeft size={16}/>
-                <span>EXIT</span>
-            </button>
+            {/* Top Controls - Mobile: Single line layout, Desktop: Original layout */}
+            {isMobile ? (
+                /* Mobile: All controls in one line */
+                <div className="fixed top-3 left-3 right-3 z-50 flex items-center justify-between gap-1.5">
+                    {/* EXIT Button */}
+                    <button
+                        onClick={() => navigate('/dashboard')}
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-md font-bold text-[10px] tracking-wide transition-all duration-300"
+                        style={{
+                            backgroundColor: currentTheme.bgAlt,
+                            color: currentTheme.text,
+                            border: `1px solid ${currentTheme.border}`,
+                            flex: '0 0 auto'
+                        }}
+                    >
+                        <ArrowLeft size={12}/>
+                        <span>EXIT</span>
+                    </button>
 
-            {/* Gallery Info */}
-            <div className="fixed top-4 right-4 md:top-6 md:right-6 z-50 flex gap-2">
-                <div className="px-4 py-2 rounded-lg" style={{
-                    backgroundColor: currentTheme.bgAlt,
-                    border: `1px solid ${currentTheme.border}`
-                }}>
-                    <p className="text-sm font-medium">{gallery.name}</p>
-                    <p className="text-xs opacity-60">{gallery.images.length} photos • {gallery.status}</p>
+                    {/* Empty space where portfolio name was */}
+                    <div style={{flex: '1 1 auto'}}/>
+
+                    {/* SAVE Button - Only show when there are pending changes */}
+                    {pendingChanges && (
+                        <button
+                            onClick={() => saveHandler && saveHandler()}
+                            disabled={isSaving}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-md font-bold text-[10px] tracking-wide transition-all duration-300"
+                            style={{
+                                backgroundColor: '#a89c8e',
+                                color: '#0a0a0a',
+                                border: 'none',
+                                flex: '0 0 auto',
+                                opacity: isSaving ? 0.7 : 1
+                            }}
+                        >
+                            <span>{isSaving ? 'SAVING...' : 'SAVE'}</span>
+                        </button>
+                    )}
+
+                    {/* VIEW or PUBLISH Button */}
+                    {gallery.status === 'published' ? (
+                        <button
+                            onClick={() => window.open(`/gallery/${id}`, '_blank')}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-md font-bold text-[10px] tracking-wide transition-all duration-300"
+                            style={{
+                                backgroundColor: currentTheme.bgAlt,
+                                color: currentTheme.text,
+                                border: `1px solid ${currentTheme.border}`,
+                                flex: '0 0 auto'
+                            }}
+                        >
+                            <ExternalLink size={12}/>
+                            <span>VIEW</span>
+                        </button>
+                    ) : (
+                        <button
+                            onClick={handlePublish}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-md font-bold text-[10px] tracking-wide transition-all duration-300"
+                            style={{
+                                backgroundColor: currentTheme.bgAlt,
+                                color: currentTheme.text,
+                                border: `1px solid ${currentTheme.border}`,
+                                flex: '0 0 auto'
+                            }}
+                        >
+                            <span>PUBLISH</span>
+                        </button>
+                    )}
                 </div>
-
-                {gallery.status !== 'published' && (
+            ) : (
+                /* Desktop: Original layout */
+                <>
+                    {/* Floating Exit Button */}
                     <button
-                        onClick={handlePublish}
-                        className="px-4 py-2 rounded-lg font-bold text-xs transition-all duration-300"
+                        onClick={() => navigate('/dashboard')}
+                        className="fixed top-6 left-6 z-50 flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-xs tracking-wide transition-all duration-300 opacity-70 hover:opacity-100"
                         style={{
                             backgroundColor: currentTheme.bgAlt,
                             color: currentTheme.text,
                             border: `1px solid ${currentTheme.border}`
                         }}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = currentTheme.bg;
-                            e.currentTarget.style.borderColor = currentTheme.accent;
+                            e.target.style.backgroundColor = currentTheme.bg;
+                            e.target.style.borderColor = currentTheme.accent;
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = currentTheme.bgAlt;
-                            e.currentTarget.style.borderColor = currentTheme.border;
+                            e.target.style.backgroundColor = currentTheme.bgAlt;
+                            e.target.style.borderColor = currentTheme.border;
                         }}
                     >
-                        PUBLISH
+                        <ArrowLeft size={16}/>
+                        <span>EXIT</span>
                     </button>
-                )}
 
-                {gallery.status === 'published' && (
-                    <button
-                        onClick={() => window.open(`/gallery/${id}`, '_blank')}
-                        className="px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-1 transition-all duration-300"
-                        style={{
+                    {/* Gallery Info */}
+                    <div className="fixed top-6 right-6 z-50 flex gap-2">
+                        <div className="px-4 py-2 rounded-lg" style={{
                             backgroundColor: currentTheme.bgAlt,
-                            color: currentTheme.text,
                             border: `1px solid ${currentTheme.border}`
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = currentTheme.bg;
-                            e.currentTarget.style.borderColor = currentTheme.accent;
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = currentTheme.bgAlt;
-                            e.currentTarget.style.borderColor = currentTheme.border;
-                        }}
-                    >
-                        <ExternalLink size={14}/>
-                        <span>VIEW</span>
-                    </button>
-                )}
-            </div>
+                        }}>
+                            <p className="text-sm font-medium">{gallery.name}</p>
+                            <p className="text-xs opacity-60">{gallery.images.length} photos • {gallery.status}</p>
+                        </div>
+
+                        {gallery.status !== 'published' && (
+                            <button
+                                onClick={handlePublish}
+                                className="px-4 py-2 rounded-lg font-bold text-xs transition-all duration-300"
+                                style={{
+                                    backgroundColor: currentTheme.bgAlt,
+                                    color: currentTheme.text,
+                                    border: `1px solid ${currentTheme.border}`
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = currentTheme.bg;
+                                    e.currentTarget.style.borderColor = currentTheme.accent;
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = currentTheme.bgAlt;
+                                    e.currentTarget.style.borderColor = currentTheme.border;
+                                }}
+                            >
+                                PUBLISH
+                            </button>
+                        )}
+
+                        {gallery.status === 'published' && (
+                            <button
+                                onClick={() => window.open(`/gallery/${id}`, '_blank')}
+                                className="px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-1 transition-all duration-300"
+                                style={{
+                                    backgroundColor: currentTheme.bgAlt,
+                                    color: currentTheme.text,
+                                    border: `1px solid ${currentTheme.border}`
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = currentTheme.bg;
+                                    e.currentTarget.style.borderColor = currentTheme.accent;
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = currentTheme.bgAlt;
+                                    e.currentTarget.style.borderColor = currentTheme.border;
+                                }}
+                            >
+                                <ExternalLink size={14}/>
+                                <span>VIEW</span>
+                            </button>
+                        )}
+                    </div>
+                </>
+            )}
 
             <CursorTrailGallery
                 images={gallery.images}
@@ -259,6 +347,11 @@ const GalleryEditor = () => {
                 initialNameLink={gallery.config.branding?.customNameLink || ''}
                 initialEmail={gallery.config.branding?.customEmail || ''}
                 galleryConfig={gallery.config}
+                setPendingSaveState={setPendingChanges}
+                setSaveHandler={(handler, saving) => {
+                    setSaveHandler(() => handler);
+                    setIsSaving(saving);
+                }}
                 theme={{
                     controlsBg: currentTheme.bg,
                     controlsText: currentTheme.text

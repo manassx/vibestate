@@ -74,7 +74,7 @@ const Dashboard = () => {
     return (
         <div
             className="min-h-screen relative overflow-hidden transition-colors duration-500"
-            style={{backgroundColor: currentTheme.bg, paddingTop: '56px'}}
+            style={{backgroundColor: currentTheme.bg, paddingTop: '80px'}}
         >
             {/* Animated noise scanline overlay */}
             <div
@@ -106,19 +106,19 @@ const Dashboard = () => {
             <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8 relative z-10">
                 {/* Header */}
                 <motion.div
-                    className="mb-4 sm:mb-6 md:mb-8 lg:mb-12"
+                    className="mb-6 sm:mb-8 md:mb-10 lg:mb-12"
                     initial={{opacity: 0, y: -20}}
                     animate={{opacity: 1, y: 0}}
                     transition={{duration: 0.6}}
                 >
                     <h1
-                        className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-black tracking-tight transition-colors duration-500"
+                        className="text-2xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-black tracking-tight transition-colors duration-500"
                         style={{fontFamily: 'Arial Black, sans-serif', color: currentTheme.text}}
                     >
                         {hasPortfolio ? `Welcome back, ${user?.name || 'Creator'}` : `${user?.name || 'Ready'}`}
                     </h1>
                     <p
-                        className="text-[10px] sm:text-xs md:text-sm lg:text-base xl:text-lg mt-1.5 sm:mt-2 md:mt-3 lg:mt-4 transition-colors duration-500"
+                        className="text-sm sm:text-xs md:text-sm lg:text-base xl:text-lg mt-2 sm:mt-2 md:mt-3 lg:mt-4 transition-colors duration-500"
                         style={{fontFamily: 'Georgia, serif', color: currentTheme.textMuted}}
                     >
                         {hasPortfolio
@@ -267,7 +267,7 @@ const Dashboard = () => {
                         ].map((feature, idx) => (
                             <motion.div
                                 key={idx}
-                                className="p-5 sm:p-6 border transition-all duration-500"
+                                className="p-6 sm:p-6 border transition-all duration-500"
                                 style={{
                                     backgroundColor: currentTheme.bgAlt,
                                     borderColor: currentTheme.border,
@@ -278,21 +278,21 @@ const Dashboard = () => {
                                 transition={{duration: 0.6, delay: 0.3 + (idx * 0.1)}}
                             >
                                 <div
-                                    className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center mb-3 md:mb-4 transition-colors duration-300"
+                                    className="w-12 h-12 sm:w-12 sm:h-12 rounded-full flex items-center justify-center mb-4 md:mb-4 transition-colors duration-300"
                                     style={{
                                         backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'
                                     }}
                                 >
-                                    <feature.icon className="w-5 h-5 sm:w-6 sm:h-6"
+                                    <feature.icon className="w-6 h-6 sm:w-6 sm:h-6"
                                                   style={{color: currentTheme.accent}}/>
                                 </div>
-                                <h3 className="text-base sm:text-lg md:text-xl font-black mb-2"
+                                <h3 className="text-lg sm:text-lg md:text-xl font-black mb-2"
                                     style={{color: currentTheme.text}}
                                 >
                                     {feature.title}
                                 </h3>
                                 <p
-                                    className="text-xs sm:text-sm md:text-base leading-relaxed transition-colors duration-500"
+                                    className="text-sm sm:text-sm md:text-base leading-relaxed transition-colors duration-500"
                                     style={{fontFamily: 'Georgia, serif', color: currentTheme.textMuted}}
                                 >
                                     {feature.desc}
@@ -305,7 +305,7 @@ const Dashboard = () => {
                     <div>
                         {/* Portfolio Preview Card */}
                         <motion.div
-                            className="p-5 sm:p-6 md:p-8 lg:p-10 border transition-all duration-500 mb-4 sm:mb-6 md:mb-8"
+                            className="p-6 sm:p-6 md:p-8 lg:p-10 border transition-all duration-500 mb-6 sm:mb-6 md:mb-8"
                             style={{
                                 backgroundColor: currentTheme.bgAlt,
                                 borderColor: currentTheme.border,
@@ -314,18 +314,18 @@ const Dashboard = () => {
                             animate={{opacity: 1, y: 0}}
                             transition={{duration: 0.6, delay: 0.2}}
                         >
-                            <div className="flex flex-col gap-4 sm:gap-5 md:gap-6">
+                            <div className="flex flex-col gap-5 sm:gap-5 md:gap-6">
                                 {/* Portfolio Info */}
                                 <div className="flex-1">
-                                    <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-2 md:mb-3">
+                                    <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-3 md:mb-3">
                                         <h2
-                                            className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black transition-colors duration-500"
+                                            className="text-2xl sm:text-2xl md:text-3xl lg:text-4xl font-black transition-colors duration-500"
                                             style={{color: currentTheme.text}}
                                         >
                                             {portfolio.name}
                                         </h2>
                                         <span
-                                            className="text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full font-bold"
+                                            className="text-xs px-3 py-1 sm:px-3 sm:py-1 rounded-full font-bold"
                                             style={{
                                                 backgroundColor: isPublished
                                                     ? (isDark ? 'rgba(168, 156, 142, 0.2)' : 'rgba(42, 37, 32, 0.15)')
@@ -338,23 +338,23 @@ const Dashboard = () => {
                                     </div>
                                     {portfolio.description && (
                                         <p
-                                            className="text-xs sm:text-sm md:text-base mb-3 md:mb-4 transition-colors duration-500"
+                                            className="text-sm sm:text-sm md:text-base mb-4 md:mb-4 transition-colors duration-500"
                                             style={{fontFamily: 'Georgia, serif', color: currentTheme.textMuted}}
                                         >
                                             {portfolio.description}
                                         </p>
                                     )}
-                                    <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm">
-                                        <div className="flex items-center gap-1.5 sm:gap-2">
-                                            <ImageIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4"
+                                    <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm sm:text-sm">
+                                        <div className="flex items-center gap-2 sm:gap-2">
+                                            <ImageIcon className="w-4 h-4 sm:w-4 sm:h-4"
                                                        style={{color: currentTheme.accent}}/>
                                             <span style={{color: currentTheme.textMuted}}>
                                                 {portfolio.image_count || 0} images
                                             </span>
                                         </div>
                                         {isPublished && (
-                                            <div className="flex items-center gap-1.5 sm:gap-2">
-                                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full"
+                                            <div className="flex items-center gap-2 sm:gap-2">
+                                                <div className="w-2 h-2 sm:w-2 sm:h-2 rounded-full"
                                                      style={{backgroundColor: '#4ade80'}}></div>
                                                 <span style={{color: currentTheme.textMuted}}>
                                                     Ready to share
@@ -364,11 +364,11 @@ const Dashboard = () => {
                                     </div>
                                 </div>
 
-                                {/* Action Buttons */}
+                                {/* Action Buttons - Two per row: EDIT+VIEW on first row, SHARE+DELETE on second row */}
                                 <div className="flex flex-wrap gap-2 sm:gap-3">
                                     <Link
                                         to={`/gallery/${portfolio.id}/edit`}
-                                        className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 md:px-6 py-2.5 sm:py-3 font-bold text-xs sm:text-sm tracking-wide transition-all duration-300"
+                                        className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 md:px-6 py-2.5 sm:py-3 font-bold text-xs sm:text-sm tracking-wide transition-all duration-300 flex-1 sm:flex-initial justify-center sm:justify-start min-w-[calc(50%-0.25rem)] sm:min-w-0"
                                         style={{
                                             backgroundColor: currentTheme.accent,
                                             color: isDark ? '#0a0a0a' : '#f5f3ef'
@@ -382,8 +382,8 @@ const Dashboard = () => {
                                             e.target.style.transform = 'translateY(0)';
                                         }}
                                     >
-                                        <Edit size={14}/>
-                                        <span>EDIT</span>
+                                        <Edit size={16}/>
+                                        <span>EDIT PORTFOLIO</span>
                                     </Link>
 
                                     {isPublished && (
@@ -391,19 +391,18 @@ const Dashboard = () => {
                                             <Link
                                                 to={`/gallery/${portfolio.id}`}
                                                 target="_blank"
-                                                className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 md:px-6 py-2.5 sm:py-3 border font-bold text-xs sm:text-sm tracking-wide transition-all duration-300"
+                                                className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 md:px-6 py-2.5 sm:py-3 font-bold text-xs sm:text-sm tracking-wide transition-all duration-300 flex-1 sm:flex-initial justify-center sm:justify-start min-w-[calc(50%-0.25rem)] sm:min-w-0"
                                                 style={{
-                                                    borderColor: currentTheme.border,
-                                                    color: currentTheme.text,
-                                                    backgroundColor: 'transparent'
+                                                    backgroundColor: currentTheme.accent,
+                                                    color: isDark ? '#0a0a0a' : '#f5f3ef'
                                                 }}
                                                 onMouseEnter={(e) => {
-                                                    e.target.style.borderColor = currentTheme.accent;
-                                                    e.target.style.backgroundColor = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)';
+                                                    e.target.style.backgroundColor = currentTheme.accentHover;
+                                                    e.target.style.transform = 'translateY(-2px)';
                                                 }}
                                                 onMouseLeave={(e) => {
-                                                    e.target.style.borderColor = currentTheme.border;
-                                                    e.target.style.backgroundColor = 'transparent';
+                                                    e.target.style.backgroundColor = currentTheme.accent;
+                                                    e.target.style.transform = 'translateY(0)';
                                                 }}
                                             >
                                                 <Eye size={14}/>
@@ -412,7 +411,7 @@ const Dashboard = () => {
 
                                             <button
                                                 onClick={handleShare}
-                                                className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 md:px-6 py-2.5 sm:py-3 border font-bold text-xs sm:text-sm tracking-wide transition-all duration-300"
+                                                className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 md:px-6 py-2.5 sm:py-3 border font-bold text-xs sm:text-sm tracking-wide transition-all duration-300 flex-1 sm:flex-initial justify-center sm:justify-start min-w-[calc(50%-0.25rem)] sm:min-w-0"
                                                 style={{
                                                     borderColor: currentTheme.border,
                                                     color: currentTheme.text,
@@ -434,7 +433,7 @@ const Dashboard = () => {
                                     )}
                                     <button
                                         onClick={handleDeleteClick}
-                                        className="flex items-center gap-1.5 px-4 sm:px-5 md:px-6 py-2.5 sm:py-3 border font-bold text-xs sm:text-sm tracking-wide transition-all duration-300"
+                                        className="flex items-center gap-1.5 px-4 sm:px-5 md:px-6 py-2.5 sm:py-3 border font-bold text-xs sm:text-sm tracking-wide transition-all duration-300 flex-1 sm:flex-initial justify-center sm:justify-start min-w-[calc(50%-0.25rem)] sm:min-w-0"
                                         style={{
                                             borderColor: currentTheme.border,
                                             color: '#ff4444',
@@ -450,6 +449,7 @@ const Dashboard = () => {
                                         }}
                                     >
                                         <Trash2 size={14}/>
+                                        <span>DELETE</span>
                                     </button>
                                 </div>
                             </div>
@@ -464,39 +464,39 @@ const Dashboard = () => {
                         >
                             {/* Customization Card */}
                             <motion.div
-                                className="p-5 sm:p-6 border transition-all duration-500 cursor-pointer"
+                                className="p-6 sm:p-6 border transition-all duration-500 cursor-pointer"
                                 style={{
                                     backgroundColor: currentTheme.bgAlt,
                                     borderColor: currentTheme.border,
                                 }}
                                 whileHover={{y: -4, borderColor: currentTheme.accent}}
-                                onClick={() => navigate('/settings')}
+                                onClick={() => portfolio && navigate(`/gallery/${portfolio.id}/edit`)}
                             >
                                 <div
-                                    className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center mb-3 sm:mb-4 transition-colors duration-300"
+                                    className="w-12 h-12 sm:w-12 sm:h-12 rounded-full flex items-center justify-center mb-4 sm:mb-4 transition-colors duration-300"
                                     style={{
                                         backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'
                                     }}
                                 >
-                                    <Palette className="w-5 h-5 sm:w-6 sm:h-6" style={{color: currentTheme.accent}}/>
+                                    <Palette className="w-6 h-6 sm:w-6 sm:h-6" style={{color: currentTheme.accent}}/>
                                 </div>
-                                <h3 className="text-base sm:text-lg font-black mb-2" style={{color: currentTheme.text}}>
-                                    Customize
+                                <h3 className="text-lg sm:text-lg font-black mb-2" style={{color: currentTheme.text}}>
+                                    Edit Portfolio
                                 </h3>
                                 <p
-                                    className="text-xs sm:text-sm leading-relaxed mb-2 sm:mb-3 transition-colors duration-500"
+                                    className="text-sm sm:text-sm leading-relaxed mb-3 sm:mb-3 transition-colors duration-500"
                                     style={{fontFamily: 'Georgia, serif', color: currentTheme.textMuted}}
                                 >
                                     Fine-tune your portfolio's look and feel
                                 </p>
                                 <span className="text-xs font-bold tracking-wide" style={{color: currentTheme.accent}}>
-                                    SETTINGS →
+                                    EDIT →
                                 </span>
                             </motion.div>
 
                             {/* Stats Card */}
                             <motion.div
-                                className="p-5 sm:p-6 border transition-all duration-500"
+                                className="p-6 sm:p-6 border transition-all duration-500"
                                 style={{
                                     backgroundColor: currentTheme.bgAlt,
                                     borderColor: currentTheme.border,
@@ -504,30 +504,30 @@ const Dashboard = () => {
                                 whileHover={{y: -4, borderColor: currentTheme.accent}}
                             >
                                 <div
-                                    className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center mb-3 sm:mb-4 transition-colors duration-300"
+                                    className="w-12 h-12 sm:w-12 sm:h-12 rounded-full flex items-center justify-center mb-4 sm:mb-4 transition-colors duration-300"
                                     style={{
                                         backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'
                                     }}
                                 >
-                                    <ImageIcon className="w-5 h-5 sm:w-6 sm:h-6" style={{color: currentTheme.accent}}/>
+                                    <ImageIcon className="w-6 h-6 sm:w-6 sm:h-6" style={{color: currentTheme.accent}}/>
                                 </div>
-                                <h3 className="text-base sm:text-lg font-black mb-2" style={{color: currentTheme.text}}>
+                                <h3 className="text-lg sm:text-lg font-black mb-2" style={{color: currentTheme.text}}>
                                     Your Collection
                                 </h3>
                                 <p
-                                    className="text-2xl sm:text-3xl font-black mb-1 transition-colors duration-500"
+                                    className="text-3xl sm:text-3xl font-black mb-1 transition-colors duration-500"
                                     style={{color: currentTheme.text}}
                                 >
                                     {portfolio.image_count || 0}
                                 </p>
-                                <p className="text-xs" style={{color: currentTheme.textMuted}}>
+                                <p className="text-sm" style={{color: currentTheme.textMuted}}>
                                     images in portfolio
                                 </p>
                             </motion.div>
 
-                            {/* Tips Card */}
+                            {/* Tips Card - Hidden on mobile using CSS */}
                             <motion.div
-                                className="p-5 sm:p-6 border transition-all duration-500 sm:col-span-2 lg:col-span-1"
+                                className="hidden lg:block p-5 sm:p-6 border transition-all duration-500 sm:col-span-2 lg:col-span-1"
                                 style={{
                                     backgroundColor: currentTheme.bgAlt,
                                     borderColor: currentTheme.border,
