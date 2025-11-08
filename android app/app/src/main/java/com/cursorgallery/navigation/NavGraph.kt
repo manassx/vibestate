@@ -7,10 +7,15 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import androidx.navigation.NavType
 import com.cursorgallery.data.local.TokenManager
 import com.cursorgallery.ui.screens.auth.LoginScreen
 import com.cursorgallery.ui.screens.auth.SignupScreen
 import com.cursorgallery.ui.screens.home.DashboardScreen
+import com.cursorgallery.ui.screens.portfolio.CreatePortfolioScreen
+import com.cursorgallery.ui.screens.portfolio.GalleryEditorScreen
+import com.cursorgallery.ui.screens.portfolio.PortfolioViewerScreen
 import com.cursorgallery.ui.screens.splash.SplashScreen
 
 sealed class Screen(val route: String) {
@@ -18,9 +23,11 @@ sealed class Screen(val route: String) {
     object Login : Screen("login")
     object Signup : Screen("signup")
     object Dashboard : Screen("dashboard")
-    object Gallery : Screen("gallery/{galleryId}")
+    object CreatePortfolio : Screen("create_portfolio")
     object Editor : Screen("editor/{galleryId}")
+    object Viewer : Screen("viewer/{galleryId}")
     object Settings : Screen("settings")
+    object Gallery : Screen("gallery/{galleryId}")
     object Share : Screen("share/{galleryId}")
 }
 
@@ -84,6 +91,40 @@ fun NavGraph(
             )
         }
 
-        // TODO: Add other screens (Gallery, Editor, Settings, Share)
+        composable(Screen.CreatePortfolio.route) {
+            CreatePortfolioScreen(
+                tokenManager = tokenManager,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToEditor = { galleryId ->
+                    navController.navigate("editor/$galleryId") {
+                        popUpTo(Screen.Dashboard.route)
+                    }
+                }
+            )
+        }
+
+        composable(
+            route = "editor/{galleryId}",
+            arguments = listOf(navArgument("galleryId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val galleryId = backStackEntry.arguments?.getString("galleryId") ?: ""
+            GalleryEditorScreen(
+                tokenManager = tokenManager,
+                galleryId = galleryId,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = "viewer/{galleryId}",
+            arguments = listOf(navArgument("galleryId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val galleryId = backStackEntry.arguments?.getString("galleryId") ?: ""
+            PortfolioViewerScreen(
+                tokenManager = tokenManager,
+                galleryId = galleryId,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
     }
 }

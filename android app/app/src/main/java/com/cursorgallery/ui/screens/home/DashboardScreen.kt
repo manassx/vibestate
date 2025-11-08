@@ -1,5 +1,8 @@
 package com.cursorgallery.ui.screens.home
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.BorderStroke
@@ -95,12 +98,7 @@ fun DashboardScreen(
                     EmptyState(
                         userName = uiState.userName ?: "Ready",
                         onCreatePortfolio = {
-                            // Show toast for now - will be replaced with actual create flow
-                            android.widget.Toast.makeText(
-                                context,
-                                "Create portfolio feature coming soon",
-                                android.widget.Toast.LENGTH_SHORT
-                            ).show()
+                            navController.navigate("create_portfolio")
                         }
                     )
                 }
@@ -109,28 +107,31 @@ fun DashboardScreen(
                         userName = uiState.userName ?: "Creator",
                         portfolio = uiState.portfolio!!,
                         onEdit = {
-                            // TODO: Navigate to editor screen when it's created
-                            android.widget.Toast.makeText(
-                                context,
-                                "Editor coming soon",
-                                android.widget.Toast.LENGTH_SHORT
-                            ).show()
+                            navController.navigate("editor/${uiState.portfolio!!.id}")
                         },
                         onView = {
-                            // TODO: Navigate to public view when it's created
-                            android.widget.Toast.makeText(
-                                context,
-                                "Public view coming soon",
-                                android.widget.Toast.LENGTH_SHORT
-                            ).show()
+                            navController.navigate("viewer/${uiState.portfolio!!.id}")
                         },
                         onShare = {
-                            // TODO: Implement share functionality
-                            android.widget.Toast.makeText(
-                                context,
-                                "Share feature coming soon",
-                                android.widget.Toast.LENGTH_SHORT
-                            ).show()
+                            if (uiState.portfolio!!.status == "published") {
+                                val portfolioLink =
+                                    "https://cursorgallery.com/gallery/${uiState.portfolio!!.id}"
+                                val clipboard =
+                                    context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                val clip = ClipData.newPlainText("Portfolio Link", portfolioLink)
+                                clipboard.setPrimaryClip(clip)
+                                android.widget.Toast.makeText(
+                                    context,
+                                    "✓ Link copied!",
+                                    android.widget.Toast.LENGTH_SHORT
+                                ).show()
+                            } else {
+                                android.widget.Toast.makeText(
+                                    context,
+                                    "Publish your portfolio first to share",
+                                    android.widget.Toast.LENGTH_SHORT
+                                ).show()
+                            }
                         },
                         onDelete = { viewModel.showDeleteDialog() }
                     )

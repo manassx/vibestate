@@ -28,7 +28,6 @@ import com.cursorgallery.data.models.LoginRequest
 import com.cursorgallery.ui.components.FloatingLabelPasswordField
 import com.cursorgallery.ui.components.FloatingLabelTextField
 import com.cursorgallery.ui.components.GoogleLogo
-import com.cursorgallery.ui.components.GrainOverlay
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
@@ -149,9 +148,6 @@ fun LoginScreen(
             .fillMaxSize()
             .background(backgroundColor)
     ) {
-        // Grain texture overlay - matching web implementation
-        GrainOverlay()
-
         Column(
             modifier = Modifier
                 .fillMaxSize()

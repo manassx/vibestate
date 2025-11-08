@@ -1,7 +1,6 @@
 package com.cursorgallery.ui.components
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -9,11 +8,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Fill
@@ -22,6 +18,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.abs
 import kotlin.random.Random
 
 @Composable
@@ -117,66 +114,6 @@ fun FloatingLabelPasswordField(
             ),
             shape = RoundedCornerShape(8.dp)
         )
-    }
-}
-
-@Composable
-fun GrainOverlay() {
-    // Use the exact same grain effect as the website using SVG noise filter
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .alpha(0.08f) // Matching web's opacity
-            .background(
-                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                    colors = listOf(Color.Transparent, Color.Transparent),
-                    startY = 0f,
-                    endY = Float.POSITIVE_INFINITY
-                )
-            )
-    ) {
-        // Create noise pattern similar to SVG turbulence filter
-        Canvas(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            val width = size.width
-            val height = size.height
-            val random = Random(42) // Fixed seed for consistent pattern
-
-            // Simulate fractal noise with multiple octaves like the website
-            val baseFrequency = 2.5f
-            val numOctaves = 4
-            val dotSize = 1f
-
-            for (octave in 0 until numOctaves) {
-                val frequency = baseFrequency * (1 shl octave)
-                val amplitude = 1f / (1 shl octave)
-
-                val stepX = width / (frequency * 50)
-                val stepY = height / (frequency * 50)
-
-                var y = 0f
-                while (y < height) {
-                    var x = 0f
-                    while (x < width) {
-                        val noise = (random.nextFloat() - 0.5f) * 2f * amplitude
-                        if (kotlin.math.abs(noise) > 0.3f) {
-                            val alpha = kotlin.math.abs(noise) * 0.15f
-                            drawCircle(
-                                color = Color.White.copy(alpha = alpha),
-                                radius = dotSize * (0.5f + kotlin.math.abs(noise)),
-                                center = androidx.compose.ui.geometry.Offset(
-                                    x + random.nextFloat() * stepX,
-                                    y + random.nextFloat() * stepY
-                                )
-                            )
-                        }
-                        x += stepX
-                    }
-                    y += stepY
-                }
-            }
-        }
     }
 }
 
