@@ -1,4 +1,4 @@
-package com.runanywhere.startup_hackathon20
+package com.cursorgallery
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -14,19 +14,19 @@ import com.cursorgallery.navigation.NavGraph
 import com.cursorgallery.ui.theme.CursorGalleryTheme
 
 class MainActivity : ComponentActivity() {
-    
+
     private lateinit var tokenManager: TokenManager
-    
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        
+
         // Initialize TokenManager
         tokenManager = TokenManager(this)
-        
+
         // Initialize ApiClient with TokenManager
         ApiClient.init(tokenManager)
-        
+
         setContent {
             CursorGalleryTheme {
                 Surface(
