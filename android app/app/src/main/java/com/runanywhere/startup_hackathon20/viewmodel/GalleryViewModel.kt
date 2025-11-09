@@ -205,7 +205,7 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
      * Generate public link for sharing
      */
     private fun generatePublicLink(cloudId: String): String {
-        return "http://192.168.1.5:8000/g/$cloudId"
+        return "http://192.168.1.6:8000/g/$cloudId"
     }
 
     /**

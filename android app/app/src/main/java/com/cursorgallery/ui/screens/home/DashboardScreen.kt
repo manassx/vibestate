@@ -51,6 +51,18 @@ fun DashboardScreen(
         viewModel.loadDashboard()
     }
 
+    // Handle unauthorized state (expired token)
+    LaunchedEffect(uiState.isUnauthorized) {
+        if (uiState.isUnauthorized) {
+            android.widget.Toast.makeText(
+                context,
+                "Session expired. Please log in again.",
+                android.widget.Toast.LENGTH_LONG
+            ).show()
+            onNavigateToLogin()
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(

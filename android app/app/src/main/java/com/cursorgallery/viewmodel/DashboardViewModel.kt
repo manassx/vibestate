@@ -17,7 +17,8 @@ data class DashboardUiState(
     val portfolio: Gallery? = null,
     val userName: String? = null,
     val error: String? = null,
-    val showDeleteDialog: Boolean = false
+    val showDeleteDialog: Boolean = false,
+    val isUnauthorized: Boolean = false
 )
 
 class DashboardViewModel(
@@ -29,7 +30,8 @@ class DashboardViewModel(
 
     fun loadDashboard() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.value =
+                _uiState.value.copy(isLoading = true, error = null, isUnauthorized = false)
 
             try {
                 // Get user info
@@ -47,6 +49,14 @@ class DashboardViewModel(
                         portfolio = portfolio,
                         userName = userName,
                         error = null
+                    )
+                } else if (response.code() == 401) {
+                    // Token expired or invalid - clear token and flag for re-login
+                    tokenManager.clearToken()
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = "Session expired. Please log in again.",
+                        isUnauthorized = true
                     )
                 } else {
                     _uiState.value = _uiState.value.copy(
@@ -85,6 +95,14 @@ class DashboardViewModel(
                         isLoading = false,
                         portfolio = null,
                         error = null
+                    )
+                } else if (response.code() == 401) {
+                    // Token expired
+                    tokenManager.clearToken()
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = "Session expired. Please log in again.",
+                        isUnauthorized = true
                     )
                 } else {
                     _uiState.value = _uiState.value.copy(

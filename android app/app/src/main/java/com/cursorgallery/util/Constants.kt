@@ -8,7 +8,7 @@ object Constants {
     // 
     // FOR EMULATOR: Use "10.0.2.2:8000"
     // FOR PHYSICAL DEVICE: Use "192.168.x.x:8000" (replace with your computer's IP)
-    const val API_BASE_URL = "http://192.168.1.3:8000"
+    const val API_BASE_URL = "http://192.168.1.6:8000"
 
     // Gallery Configuration
     const val MAX_IMAGES_PER_GALLERY = 50

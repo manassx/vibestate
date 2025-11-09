@@ -111,7 +111,10 @@ fun NavGraph(
             GalleryEditorScreen(
                 tokenManager = tokenManager,
                 galleryId = galleryId,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToViewer = { id ->
+                    navController.navigate("viewer/$id")
+                }
             )
         }
 

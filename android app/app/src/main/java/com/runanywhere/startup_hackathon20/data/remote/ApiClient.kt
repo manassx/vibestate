@@ -14,7 +14,7 @@ object ApiClient {
     // Base URL - Change this to your deployed backend URL
     // For local testing, use your computer's IP address (not localhost)
     // Example: "http://192.168.1.100:8000/" or deployed URL
-    private const val BASE_URL = "http://192.168.1.5:8000/" // Your computer's IP: 192.168.1.5
+    private const val BASE_URL = "http://192.168.1.6:8000/" // Your computer's IP: 192.168.1.6
     
     private var apiService: ApiService? = null
     

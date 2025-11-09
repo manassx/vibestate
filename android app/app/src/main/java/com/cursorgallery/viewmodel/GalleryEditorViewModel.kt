@@ -80,7 +80,8 @@ class GalleryEditorViewModel(
     fun updateThreshold(newThreshold: Int) {
         viewModelScope.launch {
             try {
-                val currentConfig = _uiState.value.gallery?.config
+                val currentGallery = _uiState.value.gallery ?: return@launch
+                val currentConfig = currentGallery.config
                 val updatedConfig = GalleryConfig(
                     threshold = newThreshold,
                     animationType = currentConfig?.animationType ?: "fade",
@@ -88,6 +89,12 @@ class GalleryEditorViewModel(
                     branding = currentConfig?.branding
                 )
 
+                // Update state immediately for smooth UI
+                _uiState.value = _uiState.value.copy(
+                    gallery = currentGallery.copy(config = updatedConfig)
+                )
+
+                // Send update to backend asynchronously
                 val response = ApiClient.apiService.patchGallery(
                     galleryId,
                     UpdateGalleryRequest(config = updatedConfig)
@@ -99,6 +106,7 @@ class GalleryEditorViewModel(
                     )
                 }
             } catch (e: Exception) {
+                // Don't clear gallery on error, just log it
                 _uiState.value = _uiState.value.copy(
                     error = e.message ?: "Failed to update threshold"
                 )
@@ -109,10 +117,29 @@ class GalleryEditorViewModel(
     fun updateImageTransform(imageId: String, transform: ImageTransform) {
         viewModelScope.launch {
             try {
-                ApiClient.apiService.updateImageTransform(imageId, transform)
+                val currentGallery = _uiState.value.gallery ?: return@launch
 
-                // Reload gallery to get updated image data
-                loadGallery()
+                // Update the specific image in state immediately
+                val updatedImages = currentGallery.images?.map { image ->
+                    if (image.id == imageId) {
+                        // Preserve existing metadata, only update transform
+                        val updatedMetadata = image.metadata?.copy(transform = transform)
+                        if (updatedMetadata != null) {
+                            image.copy(metadata = updatedMetadata)
+                        } else {
+                            image
+                        }
+                    } else {
+                        image
+                    }
+                }
+
+                _uiState.value = _uiState.value.copy(
+                    gallery = currentGallery.copy(images = updatedImages)
+                )
+
+                // Send update to backend asynchronously
+                ApiClient.apiService.updateImageTransform(imageId, transform)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     error = e.message ?: "Failed to update image"
