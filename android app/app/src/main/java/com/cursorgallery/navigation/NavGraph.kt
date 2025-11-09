@@ -17,6 +17,7 @@ import com.cursorgallery.ui.screens.portfolio.CreatePortfolioScreen
 import com.cursorgallery.ui.screens.portfolio.GalleryEditorScreen
 import com.cursorgallery.ui.screens.portfolio.PortfolioViewerScreen
 import com.cursorgallery.ui.screens.splash.SplashScreen
+import com.cursorgallery.ui.screens.ai.AiStudioBlueprintScreen
 
 sealed class Screen(val route: String) {
     object Splash : Screen("splash")
@@ -29,6 +30,7 @@ sealed class Screen(val route: String) {
     object Settings : Screen("settings")
     object Gallery : Screen("gallery/{galleryId}")
     object Share : Screen("share/{galleryId}")
+    object AiStudio : Screen("ai_studio")
 }
 
 @Composable
@@ -87,6 +89,9 @@ fun NavGraph(
                     navController.navigate(Screen.Login.route) {
                         popUpTo(0) { inclusive = true }
                     }
+                },
+                onNavigateToAiStudio = {
+                    navController.navigate(Screen.AiStudio.route)
                 }
             )
         }
@@ -128,6 +133,10 @@ fun NavGraph(
                 galleryId = galleryId,
                 onNavigateBack = { navController.popBackStack() }
             )
+        }
+
+        composable(Screen.AiStudio.route) {
+            AiStudioBlueprintScreen()
         }
     }
 }

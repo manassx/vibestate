@@ -40,6 +40,7 @@ fun DashboardScreen(
     tokenManager: TokenManager,
     navController: NavHostController,
     onNavigateToLogin: () -> Unit,
+    onNavigateToAiStudio: () -> Unit,
     viewModel: DashboardViewModel = viewModel(
         factory = DashboardViewModelFactory(tokenManager)
     )
@@ -111,7 +112,8 @@ fun DashboardScreen(
                         userName = uiState.userName ?: "Ready",
                         onCreatePortfolio = {
                             navController.navigate("create_portfolio")
-                        }
+                        },
+                        onOpenAiStudio = onNavigateToAiStudio
                     )
                 }
                 else -> {
@@ -145,7 +147,8 @@ fun DashboardScreen(
                                 ).show()
                             }
                         },
-                        onDelete = { viewModel.showDeleteDialog() }
+                        onDelete = { viewModel.showDeleteDialog() },
+                        onOpenAiStudio = onNavigateToAiStudio
                     )
                 }
             }
@@ -221,12 +224,12 @@ fun ErrorState(error: String, onRetry: () -> Unit) {
 @Composable
 fun EmptyState(
     userName: String,
-    onCreatePortfolio: () -> Unit
+    onCreatePortfolio: () -> Unit,
+    onOpenAiStudio: () -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
             .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -379,6 +382,15 @@ fun EmptyState(
                 modifier = Modifier.weight(1f)
             )
         }
+
+        AiStudioFeatureCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 180.dp),
+            onClick = onOpenAiStudio,
+            headline = "Let AI craft your vibe",
+            detail = "Mood DJ, smart sequencing, and critiques ready to run offline"
+        )
     }
 }
 
@@ -389,13 +401,14 @@ fun PortfolioExistsState(
     onEdit: () -> Unit,
     onView: () -> Unit,
     onShare: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onOpenAiStudio: () -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Header
@@ -575,24 +588,40 @@ fun PortfolioExistsState(
         }
         
         // Quick action cards
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        Column(
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            QuickActionCard(
-                icon = Icons.Default.Face,
-                title = "Edit Portfolio",
-                description = "Fine-tune your look",
-                modifier = Modifier.weight(1f),
-                onClick = onEdit
+            AiStudioFeatureCard(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onOpenAiStudio,
+                headline = "AI Studio",
+                detail = "Craft tonal journeys, not generic galleries",
+                highlights = listOf(
+                    "Palette architect for each collection",
+                    "Sequence oracle arranges the perfect flow",
+                    "Offline critique with emotion + composition scores"
+                )
             )
-            QuickActionCard(
-                icon = Icons.Default.Image,
-                title = "Your Collection",
-                count = portfolio.imageCount,
-                modifier = Modifier.weight(1f),
-                onClick = { /* Navigate to gallery */ }
-            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                QuickActionCard(
+                    icon = Icons.Default.Face,
+                    title = "Edit Portfolio",
+                    description = "Tweak branding, lighting, and motion curves",
+                    modifier = Modifier.weight(1f),
+                    onClick = onEdit
+                )
+                QuickActionCard(
+                    icon = Icons.Default.Image,
+                    title = "Your Collection",
+                    count = portfolio.imageCount,
+                    modifier = Modifier.weight(1f),
+                    onClick = { /* Navigate to gallery */ }
+                )
+            }
         }
     }
 }
@@ -658,7 +687,9 @@ fun QuickActionCard(
     onClick: () -> Unit
 ) {
     Card(
-        modifier = modifier.clickable { onClick() },
+        modifier = modifier
+            .heightIn(min = 104.dp)
+            .clickable { onClick() },
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
@@ -712,6 +743,80 @@ fun QuickActionCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun AiStudioFeatureCard(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+    headline: String = "AI Studio",
+    detail: String = "Craft tonal journeys, not generic galleries",
+    highlights: List<String> = listOf(
+        "Palette architect for each collection",
+        "Sequence oracle arranges the perfect flow",
+        "Offline critique with emotion + composition scores"
+    )
+) {
+    Card(
+        modifier = modifier
+            .heightIn(min = 220.dp)
+            .clickable { onClick() },
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        shape = MaterialTheme.shapes.small,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                        MaterialTheme.shapes.small
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.AutoAwesome,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            Text(
+                text = headline,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Black
+                ),
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = detail,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Column(
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                highlights.forEach { line ->
+                    Text(
+                        text = "- $line",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+            Text(
+                text = "Tap to launch the creative lab",
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.primary
+            )
         }
     }
 }

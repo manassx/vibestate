@@ -7,12 +7,14 @@ import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import coil.request.CachePolicy
 import coil.util.DebugLogger
+import com.cursorgallery.ai.RunAnywhereManager
 
 class CursorGalleryApp : Application(), ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
         instance = this
+        RunAnywhereManager.initialize(this)
     }
 
     override fun newImageLoader(): ImageLoader {

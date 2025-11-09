@@ -9,6 +9,8 @@ import com.cursorgallery.data.models.Gallery
 import com.cursorgallery.data.models.UpdateGalleryRequest
 import com.cursorgallery.data.models.ImageTransform
 import com.cursorgallery.data.models.GalleryConfig
+import com.cursorgallery.ai.MoodPresetSuggestion
+import com.cursorgallery.ai.ImageSequencePlan
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -143,6 +145,60 @@ class GalleryEditorViewModel(
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     error = e.message ?: "Failed to update image"
+                )
+            }
+        }
+    }
+
+    fun updateGalleryConfig(config: GalleryConfig) {
+        viewModelScope.launch {
+            val currentGallery = _uiState.value.gallery ?: return@launch
+
+            _uiState.value = _uiState.value.copy(
+                gallery = currentGallery.copy(config = config)
+            )
+
+            try {
+                val response = ApiClient.apiService.patchGallery(
+                    galleryId,
+                    UpdateGalleryRequest(config = config)
+                )
+
+                if (response.isSuccessful && response.body() != null) {
+                    _uiState.value = _uiState.value.copy(gallery = response.body())
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    error = e.message ?: "Failed to apply preset"
+                )
+            }
+        }
+    }
+
+    fun applyImageOrdering(orderedIds: List<String>) {
+        viewModelScope.launch {
+            val currentGallery = _uiState.value.gallery ?: return@launch
+
+            val reorderedImages = orderedIds.mapNotNull { id ->
+                currentGallery.images?.find { it.id == id }
+            }
+
+            _uiState.value = _uiState.value.copy(
+                gallery = currentGallery.copy(images = reorderedImages)
+            )
+
+            try {
+                val response = ApiClient.apiService.patchGallery(
+                    galleryId,
+                    UpdateGalleryRequest(orderedImageIds = orderedIds)
+                )
+
+                if (response.isSuccessful && response.body() != null) {
+                    _uiState.value = _uiState.value.copy(gallery = response.body())
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    error = e.message ?: "Failed to apply ordering"
                 )
             }
         }

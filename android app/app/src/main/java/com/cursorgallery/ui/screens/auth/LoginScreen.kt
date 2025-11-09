@@ -367,7 +367,11 @@ fun LoginScreen(
                             val googleSignInClient =
                                 GoogleSignIn.getClient(context as Activity, gso)
 
-                            googleSignInClient.signOut().addOnCompleteListener {
+                            val alreadySignedInAccount =
+                                GoogleSignIn.getLastSignedInAccount(context)
+                            if (alreadySignedInAccount != null) {
+                                googleSignInLauncher.launch(googleSignInClient.signInIntent)
+                            } else {
                                 val signInIntent = googleSignInClient.signInIntent
                                 googleSignInLauncher.launch(signInIntent)
                             }

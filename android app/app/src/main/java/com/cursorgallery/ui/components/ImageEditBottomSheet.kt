@@ -93,7 +93,7 @@ fun ImageEditBottomSheet(
                     shape = RoundedCornerShape(12.dp)
                 ),
             shape = RoundedCornerShape(12.dp),
-            color = Color(0xE6000000),  // rgba(0,0,0,0.9)
+            color = Color(0xFF000000),  // Fully solid black
             tonalElevation = 0.dp
         ) {
             Column(

@@ -72,7 +72,8 @@ data class UpdateGalleryRequest(
     @SerializedName("name") val name: String? = null,
     @SerializedName("description") val description: String? = null,
     @SerializedName("config") val config: GalleryConfig? = null,
-    @SerializedName("status") val status: String? = null
+    @SerializedName("status") val status: String? = null,
+    @SerializedName("orderedImageIds") val orderedImageIds: List<String>? = null
 )
 
 data class UploadResponse(
