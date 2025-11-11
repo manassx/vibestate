@@ -1,23 +1,26 @@
 {
-  "buildCommand": "cd frontend && npm install && npm run build",
-  "outputDirectory": "frontend/dist",
-  "installCommand": "npm install --prefix frontend",
-  "functions": {
-    "api/*.py": {
-      "runtime": "python3.9"
-    }
-  },
-  "rewrites": [
+  "version": 2,
+  "builds": [
     {
-      "source": "/api/:path*",
-      "destination": "/api/:path*"
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
     },
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "src": "api/index.py",
+      "use": "@vercel/python"
     }
   ],
-  "env": {
-    "PYTHONUNBUFFERED": "1"
-  }
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/index.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/frontend/$1"
+    }
+  ]
 }
