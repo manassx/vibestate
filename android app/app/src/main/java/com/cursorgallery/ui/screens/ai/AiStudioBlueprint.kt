@@ -49,6 +49,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.cursorgallery.ai.AiActionBlueprints
 import com.cursorgallery.ai.RunAnywhereManager
@@ -152,6 +153,12 @@ internal fun AiStudioBlueprintScreen(
                     color = Color.White
                 )
 
+                Text(
+                    text = "Download and load a model to enable the AI chat assistant",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFFA8A8A8)
+                )
+
                 if (uiState.models.isEmpty()) {
                     Text(
                         text = "No models found. Make sure SDK is initialized.",
@@ -163,6 +170,7 @@ internal fun AiStudioBlueprintScreen(
                         ModelCard(
                             model = model,
                             isActive = model.id == activeModelId,
+                            isLoading = uiState.isLoading && uiState.loadingModelId == model.id,
                             downloadProgress = uiState.downloadProgress[model.id],
                             onDownload = { viewModel.downloadModel(model.id) },
                             onLoad = { viewModel.loadModel(model.id) },
@@ -173,29 +181,306 @@ internal fun AiStudioBlueprintScreen(
 
                 HorizontalDivider(color = Color(0xFF2A2A2A), thickness = 2.dp)
 
-                // AI Features Section
+                // On-Device AI Benefits Section (moved to bottom)
+                OnDeviceAiBenefitsSection()
+            }
+        }
+    }
+}
+
+@Composable
+private fun OnDeviceAiBenefitsSection() {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            text = "Why On-Device AI?",
+            style = MaterialTheme.typography.titleLarge.copy(
+                fontWeight = FontWeight.Bold
+            ),
+            color = Color.White
+        )
+
+        BenefitCard(
+            icon = "🔒",
+            title = "100% Private",
+            description = "All AI processing happens on your device. Your portfolio data never leaves your phone."
+        )
+
+        BenefitCard(
+            icon = "✈️",
+            title = "Works Offline",
+            description = "No internet required. Get creative suggestions anytime, anywhere, even in airplane mode."
+        )
+
+        BenefitCard(
+            icon = "⚡",
+            title = "Instant Responses",
+            description = "No cloud latency. Chat with AI assistant and get real-time suggestions as you create."
+        )
+
+        BenefitCard(
+            icon = "💬",
+            title = "Smart Chat Assistant",
+            description = "Ask for portfolio titles, descriptions, creative feedback, and optimization tips. The AI understands Cursor Gallery's unique features."
+        )
+    }
+}
+
+@Composable
+private fun BenefitCard(
+    icon: String,
+    title: String,
+    description: String
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = Color(0xFF141414),
+        shape = RoundedCornerShape(8.dp),
+        border = BorderStroke(1.dp, Color(0xFF2A2A2A))
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Text(
+                text = icon,
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(top = 2.dp)
+            )
+            Column(
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
                 Text(
-                    text = "AI Features",
-                    style = MaterialTheme.typography.titleLarge.copy(
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge.copy(
                         fontWeight = FontWeight.Bold
                     ),
                     color = Color.White
                 )
-
                 Text(
-                    text = "Load a model above to unlock these tools in the Gallery Editor",
+                    text = description,
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFFA8A8A8)
                 )
+            }
+        }
+    }
+}
 
-                AiActionBlueprints.actions.forEach { action ->
-                    FeatureCard(
-                        title = action.title,
-                        description = action.description,
-                        type = action.type.name
+@Composable
+private fun ModelCard(
+    model: ModelInfo,
+    isActive: Boolean,
+    isLoading: Boolean,
+    downloadProgress: Float?,
+    onDownload: () -> Unit,
+    onLoad: () -> Unit,
+    onUnload: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isActive) Color(0xFF1E3A1E) else Color(0xFF141414)
+        ),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(
+            width = if (isActive) 2.dp else 1.dp,
+            color = if (isActive) Color(0xFF4CAF50) else Color(0xFF2A2A2A)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = model.name,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold
+                        ),
+                        color = Color.White
+                    )
+                    Text(
+                        text = model.category.toString(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFFA8A8A8)
+                    )
+                }
+
+                if (isActive) {
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = "Active",
+                        tint = Color(0xFF4CAF50),
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
+
+            // Model capabilities
+            val capabilities = getModelCapabilities(model.name)
+            Surface(
+                color = Color(0xFF1A1A1A),
+                shape = RoundedCornerShape(6.dp),
+                border = BorderStroke(1.dp, Color(0xFF2A2A2A))
+            ) {
+                Column(
+                    modifier = Modifier.padding(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "CAPABILITIES",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp
+                        ),
+                        color = Color(0xFF666666)
+                    )
+                    Text(
+                        text = capabilities.first,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontWeight = FontWeight.Medium
+                        ),
+                        color = Color(0xFFE8E8E8)
+                    )
+                    Text(
+                        text = capabilities.second,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFFA8A8A8)
+                    )
+                }
+            }
+
+            // Download progress
+            if (downloadProgress != null) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    LinearProgressIndicator(
+                        progress = { downloadProgress },
+                        modifier = Modifier.fillMaxWidth(),
+                        color = Color(0xFFE8E8E8),
+                        trackColor = Color(0xFF2A2A2A)
+                    )
+                    Text(
+                        text = "Downloading: ${(downloadProgress * 100).toInt()}%",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFFA8A8A8)
+                    )
+                }
+            }
+
+            // Loading indicator when model is being loaded
+            if (isLoading) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = Color(0xFF4CAF50),
+                        strokeWidth = 2.dp
+                    )
+                    Text(
+                        text = "Loading model...",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFFA8A8A8)
+                    )
+                }
+            }
+
+            // Action buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                when {
+                    !model.isDownloaded && downloadProgress == null -> {
+                        Button(
+                            onClick = onDownload,
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFE8E8E8),
+                                contentColor = Color(0xFF0A0A0A)
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.CloudDownload,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Download", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    model.isDownloaded && !isActive && !isLoading -> {
+                        Button(
+                            onClick = onLoad,
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF4CAF50),
+                                contentColor = Color.White
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.PlayArrow,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Load Model", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    isActive && !isLoading -> {
+                        OutlinedButton(
+                            onClick = onUnload,
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = Color(0xFFFF5555)
+                            ),
+                            border = BorderStroke(1.dp, Color(0xFFFF5555)),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Stop,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Unload", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Helper function to get model capabilities
+private fun getModelCapabilities(modelName: String): Pair<String, String> {
+    return when {
+        // Match "Llama 3.2 1B Instruct Q6_K"
+        modelName.contains("Llama", ignoreCase = true) && modelName.contains("3.2", ignoreCase = true) -> {
+            "Most Powerful & Capable" to "1B parameters (~650MB). Highest quality responses with superior reasoning and instruction-following. Best for complex creative tasks, detailed critiques, and nuanced conversations. Slower but most intelligent."
+        }
+        // Match "Qwen 2.5 0.5B Instruct Q6_K"
+        modelName.contains("Qwen", ignoreCase = true) && modelName.contains("2.5", ignoreCase = true) -> {
+            "Balanced & Recommended" to "0.5B parameters (~380MB). Excellent balance of speed and quality. Strong creative writing and JSON generation. Fast inference with good intelligence. Ideal for sequence planning and mood suggestions."
+        }
+        // Match "SmolLM2 360M Q8_0"
+        modelName.contains("SmolLM", ignoreCase = true) && modelName.contains("360M", ignoreCase = true) -> {
+            "Fastest & Most Efficient" to "360M parameters (~220MB). Ultra-fast responses with minimal battery and memory usage. Best for quick tasks, simple queries, and low-end devices. Instant feedback but lower quality output."
+        }
+        else -> {
+            "General Purpose" to "Suitable for on-device AI text generation tasks. Check model size for performance expectations."
         }
     }
 }
@@ -222,12 +507,15 @@ private fun StatusCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 val (icon, color) = when (managerState) {
-                    is RunAnywhereManager.InitializationState.Initialized -> 
+                    is RunAnywhereManager.InitializationState.Initialized ->
                         Icons.Default.CheckCircle to Color(0xFF4CAF50)
-                    is RunAnywhereManager.InitializationState.Initializing -> 
+
+                    is RunAnywhereManager.InitializationState.Initializing ->
                         Icons.Default.CloudDownload to Color(0xFFFFA726)
-                    is RunAnywhereManager.InitializationState.Failed -> 
+
+                    is RunAnywhereManager.InitializationState.Failed ->
                         Icons.Default.Error to Color(0xFFFF5555)
+
                     else -> Icons.Default.Error to Color(0xFFA8A8A8)
                 }
 
@@ -285,189 +573,6 @@ private fun StatusCard(
                     )
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun ModelCard(
-    model: ModelInfo,
-    isActive: Boolean,
-    downloadProgress: Float?,
-    onDownload: () -> Unit,
-    onLoad: () -> Unit,
-    onUnload: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isActive) Color(0xFF1E3A1E) else Color(0xFF141414)
-        ),
-        shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(
-            width = if (isActive) 2.dp else 1.dp,
-            color = if (isActive) Color(0xFF4CAF50) else Color(0xFF2A2A2A)
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = model.name,
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold
-                        ),
-                        color = Color.White
-                    )
-                    Text(
-                        text = model.category.toString(),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFFA8A8A8)
-                    )
-                }
-
-                if (isActive) {
-                    Icon(
-                        Icons.Default.CheckCircle,
-                        contentDescription = "Active",
-                        tint = Color(0xFF4CAF50),
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
-
-            // Download progress
-            if (downloadProgress != null) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    LinearProgressIndicator(
-                        progress = { downloadProgress },
-                        modifier = Modifier.fillMaxWidth(),
-                        color = Color(0xFFE8E8E8),
-                        trackColor = Color(0xFF2A2A2A)
-                    )
-                    Text(
-                        text = "Downloading: ${(downloadProgress * 100).toInt()}%",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFFA8A8A8)
-                    )
-                }
-            }
-
-            // Action buttons
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                when {
-                    !model.isDownloaded && downloadProgress == null -> {
-                        Button(
-                            onClick = onDownload,
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFFE8E8E8),
-                                contentColor = Color(0xFF0A0A0A)
-                            ),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.CloudDownload,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Download", fontWeight = FontWeight.Bold)
-                        }
-                    }
-                    model.isDownloaded && !isActive -> {
-                        Button(
-                            onClick = onLoad,
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF4CAF50),
-                                contentColor = Color.White
-                            ),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.PlayArrow,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Load Model", fontWeight = FontWeight.Bold)
-                        }
-                    }
-                    isActive -> {
-                        OutlinedButton(
-                            onClick = onUnload,
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = Color(0xFFFF5555)
-                            ),
-                            border = BorderStroke(1.dp, Color(0xFFFF5555)),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Stop,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Unload", fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun FeatureCard(
-    title: String,
-    description: String,
-    type: String
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = Color(0xFF141414),
-        shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, Color(0xFF2A2A2A))
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontWeight = FontWeight.Bold
-                    ),
-                    color = Color.White
-                )
-                Text(
-                    text = type,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color(0xFFA8A8A8)
-                )
-            }
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFFA8A8A8)
-            )
         }
     }
 }

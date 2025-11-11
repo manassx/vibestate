@@ -18,72 +18,140 @@ internal object AiBlueprintDocumentation {
     }
 
     fun moodDjPromptTemplate(userPrompt: String, gallery: Gallery): String {
-        // ULTRA SIMPLE TEST - just ask directly without any formatting
-        return "Generate a JSON object with these fields: title (string), description (string), primaryColor (hex code like #FF5733), secondaryColor (hex code). The title should be: $userPrompt"
+        return """
+Gallery: ${gallery.name}
+Request: $userPrompt
+
+Create a mood preset. Return only JSON:
+{
+  "title": "2-3 word title",
+  "description": "short description",
+  "animationType": "fade",
+  "mood": "one word",
+  "colorPaletteHex": ["#HEX1", "#HEX2", "#HEX3"]
+}
+""".trimIndent()
     }
 
     fun critiquePromptTemplate(gallery: Gallery, images: List<GalleryImage>): String {
-        return buildString {
-            appendLine("You are a professional art curator reviewing a creative portfolio.")
-            appendLine("Provide constructive feedback on this gallery.")
-            appendLine()
-            appendLine("Gallery Context:")
-            appendLine("- Title: ${gallery.name}")
-            appendLine("- Description: ${gallery.description ?: "No description provided"}")
-            appendLine("- Number of images: ${images.size}")
-            appendLine()
-            appendLine("Evaluate this portfolio on three dimensions:")
-            appendLine("1. Composition: Technical quality, framing, visual balance")
-            appendLine("2. Emotional Resonance: Impact, mood, viewer connection")
-            appendLine("3. Storytelling: Narrative flow, thematic coherence")
-            appendLine()
-            appendLine("Generate a single JSON object with these exact fields:")
-            appendLine("{")
-            appendLine("  \"overallScore\": <0-100>,")
-            appendLine("  \"compositionScore\": <0-100>,")
-            appendLine("  \"emotionScore\": <0-100>,")
-            appendLine("  \"storytellingScore\": <0-100>,")
-            appendLine("  \"highlights\": [\"<strength 1>\", \"<strength 2>\"],")
-            appendLine("  \"recommendations\": [\"<improvement 1>\", \"<improvement 2>\"]")
-            appendLine("}")
-            appendLine()
-            appendLine("Be specific and constructive. Respond ONLY with valid JSON.")
-        }
+        return """
+Portfolio: ${gallery.name} (${images.size} images)
+
+Rate this portfolio 0-100 and give feedback. Return only JSON:
+{
+  "overallScore": 85,
+  "compositionScore": 80,
+  "emotionScore": 90,
+  "storytellingScore": 85,
+  "highlights": ["strength 1", "strength 2"],
+  "recommendations": ["tip 1", "tip 2"]
+}
+""".trimIndent()
     }
 
     fun sequencingPromptTemplate(gallery: Gallery, images: List<GalleryImage>): String {
+        val ids = images.map { it.id }
+        return """
+Reorder these image IDs for best visual flow: ${ids.joinToString(", ")}
+
+Return only JSON with ALL IDs:
+{
+  "orderedImageIds": [${ids.joinToString(", ") { "\"$it\"" }}],
+  "rationale": ["reason 1", "reason 2", "reason 3"]
+}
+""".trimIndent()
+    }
+
+    /**
+     * Generate creative description for a gallery based on its images and title
+     */
+    fun descriptionGeneratorPrompt(galleryTitle: String, imageCount: Int): String {
         return buildString {
-            appendLine("You are a visual storytelling expert arranging images for maximum impact.")
-            appendLine("Analyze these images and suggest an optimal viewing order.")
+            appendLine("You are a creative writer helping artists describe their visual portfolios.")
+            appendLine()
+            appendLine("Gallery Title: $galleryTitle")
+            appendLine("Number of Images: $imageCount")
+            appendLine()
+            appendLine("Write a compelling, concise description (30-50 words) that:")
+            appendLine("1. Captures the essence and mood of the gallery")
+            appendLine("2. Invites viewers to explore")
+            appendLine("3. Is professional yet creative")
+            appendLine()
+            appendLine("Respond ONLY with the description text (no JSON, no extra formatting).")
+        }
+    }
+
+    /**
+     * Generate social media captions for sharing the gallery
+     */
+    fun socialCaptionPrompt(gallery: Gallery, platform: String): String {
+        return buildString {
+            appendLine("You are a social media expert creating engaging captions.")
             appendLine()
             appendLine("Gallery: ${gallery.name}")
-            appendLine("Description: ${gallery.description ?: "No description"}")
+            appendLine("Description: ${gallery.description ?: "Visual collection"}")
+            appendLine("Platform: $platform")
+            appendLine("Images: ${gallery.images?.size ?: 0}")
             appendLine()
-            appendLine("Images to sequence:")
-            images.forEachIndexed { index, image ->
-                val dimensions = if (image.metadata?.width != null && image.metadata?.height != null) {
-                    "${image.metadata.width}x${image.metadata.height}"
-                } else {
-                    "unknown size"
-                }
-                appendLine("${index + 1}. ID: ${image.id.take(12)} | Dimensions: $dimensions | Current Position: ${image.orderIndex}")
+            appendLine("Create a $platform caption that:")
+            when (platform) {
+                "Twitter" -> appendLine("- Is under 280 characters\n- Uses 2-3 relevant hashtags\n- Is punchy and shareable")
+                "Instagram" -> appendLine("- Is engaging and visual\n- Uses 5-10 relevant hashtags\n- Includes call-to-action")
+                "LinkedIn" -> appendLine("- Is professional\n- Highlights creative work\n- Uses 3-5 industry hashtags")
+                else -> appendLine("- Is engaging and platform-appropriate")
             }
             appendLine()
-            appendLine("Consider:")
-            appendLine("- Color harmony and visual transitions")
-            appendLine("- Emotional progression (build tension, create resolution)")
-            appendLine("- Composition flow (varied vs consistent)")
+            appendLine("Respond ONLY with the caption text (no JSON, include hashtags).")
+        }
+    }
+
+    /**
+     * Answer visitor questions about the gallery (contextual chat)
+     */
+    fun contextualChatPrompt(gallery: Gallery, visitorQuestion: String): String {
+        val imageInfo = gallery.images?.take(5)?.mapIndexed { index, img ->
+            "Image ${index + 1}: ${img.metadata?.width}x${img.metadata?.height}"
+        }?.joinToString("\n") ?: "No images"
+
+        return buildString {
+            appendLine("You are a knowledgeable gallery assistant helping visitors understand the work.")
             appendLine()
-            appendLine("Generate a single JSON object with these exact fields:")
-            appendLine("{")
-            appendLine("  \"orderedImageIds\": [\"<image_id_1>\", \"<image_id_2>\", ...],")
-            appendLine("  \"rationale\": [\"<why position 1>\", \"<why position 2>\", ...]")
-            appendLine("}")
+            appendLine("Gallery: ${gallery.name}")
+            appendLine("Description: ${gallery.description ?: "Creative portfolio"}")
+            appendLine("Images: ${gallery.images?.size ?: 0}")
             appendLine()
-            appendLine("The orderedImageIds array must contain ALL ${images.size} image IDs from the list above.")
-            appendLine("Each rationale should be 1 short sentence explaining that image's position.")
+            appendLine("Sample Images:")
+            appendLine(imageInfo)
             appendLine()
-            appendLine("Respond ONLY with valid JSON. No markdown, no explanations outside the JSON.")
+            appendLine("Visitor asks: $visitorQuestion")
+            appendLine()
+            appendLine("Provide a helpful, friendly response (2-3 sentences) that:")
+            appendLine("- Answers their question based on available information")
+            appendLine("- Is conversational and welcoming")
+            appendLine("- Encourages further exploration if appropriate")
+            appendLine()
+            appendLine("Respond ONLY with your answer (no JSON, no formatting).")
+        }
+    }
+
+    /**
+     * Generate artist statement or portfolio introduction
+     */
+    fun artistStatementPrompt(gallery: Gallery): String {
+        return buildString {
+            appendLine("You are helping an artist write a professional statement about their work.")
+            appendLine()
+            appendLine("Portfolio: ${gallery.name}")
+            appendLine("Description: ${gallery.description ?: "Visual work"}")
+            appendLine("Collection Size: ${gallery.images?.size ?: 0} pieces")
+            appendLine()
+            appendLine("Write a brief artist statement (40-60 words) that:")
+            appendLine("1. Explains the creative vision or theme")
+            appendLine("2. Describes the artistic approach")
+            appendLine("3. Conveys the emotional or conceptual intent")
+            appendLine("4. Is professional but authentic")
+            appendLine()
+            appendLine("Respond ONLY with the statement text (no JSON, no labels).")
         }
     }
 }

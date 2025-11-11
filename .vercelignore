@@ -1,0 +1,45 @@
+# Vercel Ignore File
+# Files and folders listed here will be ignored during Vercel deployment
+# but will remain in your git repository
+
+# Android app - not needed for web deployment
+android app/
+
+# Development files
+*.md
+README.md
+DEPLOYMENT_GUIDE.md
+FIXES_APPLIED.md
+QUICK_START.md
+COMMIT_SUMMARY.md
+
+# Local environment files
+.env
+.env.local
+.env.*.local
+
+# Python virtual environment
+venv/
+env/
+
+# Node modules (Vercel installs these)
+node_modules/
+
+# Build directories (Vercel builds these)
+dist/
+build/
+
+# Database files
+*.sql
+*.sql.backup
+*.db
+*.sqlite
+
+# IDE files
+.vscode/
+.idea/
+
+# Temporary files
+*.log
+*.tmp
+*.temp

@@ -55,26 +55,29 @@ internal enum class AiActionType {
     Automation
 }
 
+// Made fields nullable with defaults to handle incomplete JSON
 internal data class MoodPresetSuggestion(
-    val title: String,
-    val description: String,
-    val animationType: String,
-    val mood: String,
-    val colorPaletteHex: List<String>
+    val title: String = "Untitled Preset",
+    val description: String = "Generated atmosphere preset",
+    val animationType: String = "fade",
+    val mood: String = "calm",
+    val colorPaletteHex: List<String> = listOf("#FFFFFF", "#EEEEEE", "#DDDDDD")
 )
 
+// Made fields nullable with defaults
 internal data class ImageSequencePlan(
-    val orderedImageIds: List<String>,
-    val rationale: List<String>
+    val orderedImageIds: List<String> = emptyList(),
+    val rationale: List<String> = emptyList()
 )
 
+// Made fields nullable with defaults to handle incomplete JSON
 internal data class CritiqueReport(
-    val overallScore: Int,
-    val compositionScore: Int,
-    val emotionScore: Int,
-    val storytellingScore: Int,
-    val highlights: List<String>,
-    val recommendations: List<String>
+    val overallScore: Int = 0,
+    val compositionScore: Int = 0,
+    val emotionScore: Int = 0,
+    val storytellingScore: Int = 0,
+    val highlights: List<String> = emptyList(),
+    val recommendations: List<String> = emptyList()
 )
 
 internal data class ViewerChatContext(

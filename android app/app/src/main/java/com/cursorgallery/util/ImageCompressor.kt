@@ -20,10 +20,10 @@ class ImageCompressor(private val context: Context) {
                 inputStream?.copyTo(outputStream)
             }
 
-            // Compress the image
+            // Compress the image with high quality and reasonable resolution
             val compressedFile = Compressor.compress(context, tempFile) {
-                quality(95) // 95% quality as per web app
-                resolution(2048, 2048) // Max resolution for reasonable file sizes
+                quality(95) // 95% quality - maintains near-original quality
+                resolution(4096, 4096) // Higher resolution limit - preserves detail for large images
             }
 
             // Delete temp file

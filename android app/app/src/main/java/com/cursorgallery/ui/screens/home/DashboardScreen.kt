@@ -385,11 +385,10 @@ fun EmptyState(
 
         AiStudioFeatureCard(
             modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 180.dp),
+                .fillMaxWidth(),
             onClick = onOpenAiStudio,
-            headline = "Let AI craft your vibe",
-            detail = "Mood DJ, smart sequencing, and critiques ready to run offline"
+            headline = "AI Assistant",
+            detail = "Your private creative consultant."
         )
     }
 }
@@ -525,65 +524,162 @@ fun PortfolioExistsState(
                 }
                 
                 // Action buttons
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
+                if (portfolio.status == "published") {
+                    // Published: Two rows layout
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // First row: EDIT + VIEW (with background, no border)
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Button(
+                                onClick = onEdit,
+                                modifier = Modifier.weight(1f),
+                                shape = MaterialTheme.shapes.small,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFFE8E8E8), // Light gray/white
+                                    contentColor = Color(0xFF0A0A0A) // Dark text
+                                ),
+                                elevation = ButtonDefaults.buttonElevation(
+                                    defaultElevation = 0.dp,
+                                    pressedElevation = 0.dp
+                                ),
+                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 12.dp)
+                            ) {
+                                Icon(Icons.Default.Edit, null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    "EDIT PORTFOLIO",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    maxLines = 1
+                                )
+                            }
+                            
+                            Button(
+                                onClick = onView,
+                                modifier = Modifier.weight(1f),
+                                shape = MaterialTheme.shapes.small,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFFE8E8E8), // Light gray/white
+                                    contentColor = Color(0xFF0A0A0A) // Dark text
+                                ),
+                                elevation = ButtonDefaults.buttonElevation(
+                                    defaultElevation = 0.dp,
+                                    pressedElevation = 0.dp
+                                ),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.RemoveRedEye,
+                                    null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    "VIEW",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    maxLines = 1
+                                )
+                            }
+                        }
+                        
+                        // Second row: SHARE + DELETE (text buttons, no background)
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            TextButton(
+                                onClick = onShare,
+                                modifier = Modifier.weight(1f),
+                                shape = MaterialTheme.shapes.small,
+                                colors = ButtonDefaults.textButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.onSurface
+                                ),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)
+                            ) {
+                                Icon(Icons.Default.Share, null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    "SHARE",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    maxLines = 1
+                                )
+                            }
+                            
+                            TextButton(
+                                onClick = onDelete,
+                                modifier = Modifier.weight(1f),
+                                shape = MaterialTheme.shapes.small,
+                                colors = ButtonDefaults.textButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.error
+                                ),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)
+                            ) {
+                                Icon(Icons.Default.Delete, null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    "DELETE",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    maxLines = 1
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    // Draft: Single row with EDIT + DELETE
                     Row(
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Button(
                             onClick = onEdit,
                             modifier = Modifier.weight(1f),
+                            shape = MaterialTheme.shapes.small,
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary
-                            )
+                                containerColor = Color(0xFFE8E8E8), // Light gray/white
+                                contentColor = Color(0xFF0A0A0A) // Dark text
+                            ),
+                            elevation = ButtonDefaults.buttonElevation(
+                                defaultElevation = 0.dp,
+                                pressedElevation = 0.dp
+                            ),
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 12.dp)
                         ) {
                             Icon(Icons.Default.Edit, null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("EDIT", fontWeight = FontWeight.Bold)
+                            Text(
+                                "EDIT PORTFOLIO",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp,
+                                maxLines = 1
+                            )
                         }
                         
-                        if (portfolio.status == "published") {
-                            Button(
-                                onClick = onView,
-                                modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary
-                                )
-                            ) {
-                                Icon(Icons.Default.RemoveRedEye, null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("VIEW", fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-                    
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        if (portfolio.status == "published") {
-                            OutlinedButton(
-                                onClick = onShare,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(Icons.Default.Share, null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("SHARE", fontWeight = FontWeight.Bold)
-                            }
-                        }
-                        OutlinedButton(
+                        TextButton(
                             onClick = onDelete,
                             modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.outlinedButtonColors(
+                            shape = MaterialTheme.shapes.small,
+                            colors = ButtonDefaults.textButtonColors(
                                 contentColor = MaterialTheme.colorScheme.error
-                            )
+                            ),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)
                         ) {
                             Icon(Icons.Default.Delete, null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("DELETE", fontWeight = FontWeight.Bold)
+                            Text(
+                                "DELETE",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp,
+                                maxLines = 1
+                            )
                         }
                     }
                 }
+
             }
         }
         
@@ -594,12 +690,13 @@ fun PortfolioExistsState(
             AiStudioFeatureCard(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = onOpenAiStudio,
-                headline = "AI Studio",
-                detail = "Craft tonal journeys, not generic galleries",
+                headline = "AI Assistant",
+                detail = "Your private creative consultant, powered entirely on your device",
                 highlights = listOf(
-                    "Palette architect for each collection",
-                    "Sequence oracle arranges the perfect flow",
-                    "Offline critique with emotion + composition scores"
+                    "100% private - all processing happens on your device",
+                    "Works offline with no internet required",
+                    "Instant creative suggestions for titles & descriptions",
+                    "Portfolio optimization advice tailored to you"
                 )
             )
 
@@ -751,18 +848,19 @@ fun QuickActionCard(
 fun AiStudioFeatureCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
-    headline: String = "AI Studio",
-    detail: String = "Craft tonal journeys, not generic galleries",
+    headline: String = "AI Assistant",
+    detail: String = "Your private creative consultant, powered entirely on your device",
     highlights: List<String> = listOf(
-        "Palette architect for each collection",
-        "Sequence oracle arranges the perfect flow",
-        "Offline critique with emotion + composition scores"
+        "100% private - all processing happens on your device",
+        "Works offline with no internet required",
+        "Instant creative suggestions for titles & descriptions",
+        "Portfolio optimization advice tailored to you"
     )
 ) {
     Card(
         modifier = modifier
-            .heightIn(min = 220.dp)
-            .clickable { onClick() },
+            .clickable { onClick() }
+            .wrapContentHeight(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
@@ -770,8 +868,10 @@ fun AiStudioFeatureCard(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Box(
                 modifier = Modifier
@@ -799,23 +899,38 @@ fun AiStudioFeatureCard(
             Text(
                 text = detail,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth()
             )
             Column(
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                highlights.forEach { line ->
-                    Text(
-                        text = "- $line",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                highlights.take(3).forEach { line ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Text(
+                            text = "•",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = line,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
             Text(
-                text = "Tap to launch the creative lab",
+                text = "Open AI Studio →",
                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(top = 4.dp)
             )
         }
     }

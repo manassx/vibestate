@@ -19,6 +19,13 @@ internal object AiFeatureToggle {
 internal object AiConfig {
     const val apiKey: String = "dev"
 
+    /**
+     * DEMO MODE: Enable this if model generation fails
+     * This will return mock AI responses instead of real generation
+     * Perfect for hackathon demos when time is limited!
+     */
+    const val DEMO_MODE = false  // Set to true for guaranteed working demo
+
     val models: List<AiModelDefinition> = listOf(
         AiModelDefinition(
             name = "Qwen 2.5 0.5B Instruct Q6_K",

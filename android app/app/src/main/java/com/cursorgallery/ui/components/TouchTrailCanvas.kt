@@ -71,8 +71,6 @@ fun TouchTrailCanvas(
     val scope = rememberCoroutineScope()
 
     // Update revealed images when the images list changes (e.g., after saving transforms)
-    // This ensures that revealed images always reference the latest GalleryImage data
-    // while maintaining their original positions
     LaunchedEffect(images) {
         if (revealedImages.isNotEmpty()) {
             revealedImages = revealedImages.map { revealed ->
@@ -287,7 +285,13 @@ fun TouchTrailCanvas(
                         val cropOverride = temporaryCropOverrides[revealed.image.id] ?: revealed.image.metadata?.transform?.crop?.let {
                             CropData(it.x, it.y, it.width, it.height)
                         }
-                        drawRevealedImage(revealed, bitmap, scaleOverride, cropOverride, selectedImageId)
+                        drawRevealedImage(
+                            revealed,
+                            bitmap,
+                            scaleOverride,
+                            cropOverride,
+                            selectedImageId
+                        )
                     }
                 }
             }

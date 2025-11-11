@@ -1,0 +1,80 @@
+============================================
+VERCEL ENVIRONMENT VARIABLES - QUICK COPY
+============================================
+Copy these to Vercel Dashboard > Settings > Environment Variables
+Replace the placeholder values with your actual values
+============================================
+
+BACKEND VARIABLES (7 total):
+----------------------------
+
+Name: SUPABASE_URL
+Value: https://dmhihoqijrjasjgjsxgn.supabase.co
+
+Name: SUPABASE_KEY
+Value: YOUR_SERVICE_ROLE_KEY_FROM_SUPABASE
+
+Name: CORS_ORIGINS
+Value: https://your-project-name.vercel.app
+
+Name: GOOGLE_AUTH_SALT
+Value: cursor-gallery-google-auth-2024
+
+Name: FLASK_ENV
+Value: production
+
+
+FRONTEND VARIABLES (6 total - all start with VITE_):
+----------------------------------------------------
+
+Name: VITE_API_URL
+Value: https://your-project-name.vercel.app
+
+Name: VITE_SUPABASE_URL
+Value: https://dmhihoqijrjasjgjsxgn.supabase.co
+
+Name: VITE_SUPABASE_ANON_KEY
+Value: YOUR_ANON_KEY_FROM_SUPABASE
+
+Name: VITE_APP_NAME
+Value: CursorGallery
+
+Name: VITE_APP_URL
+Value: https://your-project-name.vercel.app
+
+Name: VITE_NODE_ENV
+Value: production
+
+
+============================================
+WHERE TO FIND YOUR KEYS:
+============================================
+
+1. Go to: https://supabase.com/dashboard
+2. Select your project (dmhihoqijrjasjgjsxgn)
+3. Go to: Settings > API
+4. Copy:
+   - "Project URL" (already filled above)
+   - "anon public" key → use for VITE_SUPABASE_ANON_KEY
+   - "service_role" key → use for SUPABASE_KEY
+
+⚠️ CRITICAL: 
+- SUPABASE_KEY = service_role key (backend only)
+- VITE_SUPABASE_ANON_KEY = anon public key (frontend)
+- Replace "your-project-name" after first deploy
+
+============================================
+AFTER FIRST DEPLOY:
+============================================
+
+Your Vercel URL will be something like:
+https://cursor-gallery-abc123.vercel.app
+
+Update these 3 variables with your ACTUAL URL:
+1. CORS_ORIGINS
+2. VITE_API_URL  
+3. VITE_APP_URL
+
+Then REDEPLOY from Vercel dashboard!
+
+============================================
