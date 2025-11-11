@@ -4,25 +4,14 @@
   "installCommand": "cd frontend && npm install",
   "framework": null,
   "functions": {
-    "api/*.py": {
+    "api/index.py": {
       "runtime": "python3.9"
     }
   },
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "/api/:path*"
-    }
-  ],
-  "cleanUrls": true,
-  "trailingSlash": false,
-  "routes": [
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/api/(.*)",
+      "destination": "/api/index.py"
     }
   ]
 }
