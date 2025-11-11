@@ -1,4 +1,4 @@
-# ✨ **Vibestate** — The Anti-Generic Portfolio Platform
+# ✨ **CursorGallery** — The Anti-Generic Portfolio Platform
 
 > **Privacy-First, Cursor-Driven, AI-Enhanced Creative Portfolios**
 
