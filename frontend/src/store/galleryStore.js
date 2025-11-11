@@ -108,35 +108,37 @@ const useGalleryStore = create((set, get) => ({
     uploadImages: async (galleryId, files) => {
         set({uploadProgress: 0, error: null});
         try {
-            // console.log('Starting upload for', files.length, 'files');
-            // console.log('Gallery ID:', galleryId);
-            // console.log('Files:', files.map(f => ({name: f.name, size: f.size, type: f.type})));
+            // Upload files ONE AT A TIME to avoid Vercel's 4.5MB body size limit
+            let totalUploaded = 0;
+            const uploadedImages = [];
 
-            const formData = new FormData();
-            files.forEach((file, index) => {
-                // console.log(`Adding file ${index + 1}:`, file.name, file.size, 'bytes');
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const formData = new FormData();
                 formData.append('images', file);
-            });
 
-            // console.log('FormData created, making API call...');
-            const result = await post(API_ENDPOINTS.GALLERIES.UPLOAD(galleryId), formData);
-            // console.log('Upload result:', result);
+                // Upload single file
+                const result = await post(API_ENDPOINTS.GALLERIES.UPLOAD(galleryId), formData);
 
-            set({uploadProgress: 100});
+                uploadedImages.push(...(result.images || []));
+                totalUploaded += result.uploadedCount || 0;
+
+                // Update progress
+                const progress = Math.round(((i + 1) / files.length) * 100);
+                set({uploadProgress: progress});
+            }
 
             // Update gallery image count locally
             get().updateGalleryLocal(galleryId, {
-                image_count: result.uploadedCount,
+                image_count: totalUploaded,
                 status: 'processing'
             });
 
-            return result;
+            return {
+                uploadedCount: totalUploaded,
+                images: uploadedImages
+            };
         } catch (error) {
-            // console.error('Upload error:', error);
-            // console.error('Error details:', {
-            //     message: error.message,
-            //     stack: error.stack
-            // });
             set({error: error.message, uploadProgress: 0});
             throw error;
         }
