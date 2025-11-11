@@ -25,8 +25,8 @@ const PublicGallery = () => {
 
             // Fetch gallery from backend
             const galleryData = await apiGet(`/api/gallery/${id}`);
-            console.log('Loaded public gallery data:', galleryData);
-            console.log('Public gallery images:', galleryData.images);
+            // console.log('Loaded public gallery data:', galleryData);
+            // console.log('Public gallery images:', galleryData.images);
 
             // Transform images to the format expected by CursorTrailGallery
             const formattedGallery = {
@@ -47,8 +47,8 @@ const PublicGallery = () => {
                 },
             };
 
-            console.log('Formatted public gallery:', formattedGallery);
-            console.log('Formatted public images:', formattedGallery.images);
+            // console.log('Formatted public gallery:', formattedGallery);
+            // console.log('Formatted public images:', formattedGallery.images);
             setGallery(formattedGallery);
             setLoading(false);
         } catch (err) {
@@ -154,6 +154,8 @@ const PublicGallery = () => {
                 initialEmail={gallery.config.branding?.customEmail || ''}
                 galleryConfig={gallery.config}
                 theme={{
+                    ...currentTheme,
+                    isDark: isDark,
                     controlsBg: currentTheme.bg,
                     controlsText: currentTheme.text
                 }}

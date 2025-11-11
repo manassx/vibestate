@@ -129,12 +129,39 @@ function CursorTrailGallery({
     const touchMoveRaf = useRef(null);
 
     // Default theme if none provided
+    // By convention: isDark = true for dark, false for light
     const defaultTheme = {
+        isDark: true,
+        bg: '#121111',
+        bgAlt: 'rgba(0,0,0,0.9)',
+        border: '#a89c8e',
+        borderAlt: '#e4ded6',
+        text: '#181511',
+        textDim: '#9f917d',
         controlsBg: 'transparent',
-        controlsText: '#f0f0f0'
+        controlsText: '#f0f0f0',
+        accent: '#a89c8e',
+        accentHover: '#b8ac9e'
     };
 
+    // Example light theme structure:
+    const lightTheme = {
+        isDark: false,
+        bg: '#f5f3ef',
+        bgAlt: 'rgba(245,243,239,0.9)',
+        border: '#ded7cb',
+        borderAlt: '#a89c8e',
+        text: '#473a2a',
+        textDim: '#806f5e',
+        controlsBg: 'rgba(0,0,0,0.05)',
+        controlsText: '#473a2a',
+        accent: '#a89c8e',
+        accentHover: '#b8ac9e'
+    };
+
+    // Use the theme provided or fall back to default
     const currentTheme = theme || defaultTheme;
+    const isDark = currentTheme.isDark !== undefined ? currentTheme.isDark : true;
 
     // Load branding from galleryConfig on mount or when it changes
     useEffect(() => {
@@ -163,31 +190,31 @@ function CursorTrailGallery({
 
     // Load initial transforms from images metadata
     useEffect(() => {
-        console.log('=== LOADING IMAGE TRANSFORMS ===');
-        console.log('Images array:', images);
+        // console.log('=== LOADING IMAGE TRANSFORMS ===');
+        // console.log('Images array:', images);
 
         if (images && images.length > 0) {
             const transforms = {};
             images.forEach((img, index) => {
-                console.log(`Image ${index}:`, {
-                    id: img.id,
-                    url: img.url,
-                    metadata: img.metadata,
-                    hasTransform: !!(img.metadata && img.metadata.transform)
-                });
+                // console.log(`Image ${index}:`, {
+                //     id: img.id,
+                //     url: img.url,
+                //     metadata: img.metadata,
+                //     hasTransform: !!(img.metadata && img.metadata.transform)
+                // });
 
                 if (img.metadata && img.metadata.transform) {
-                    console.log(`✅ Found transform for image ${img.id}:`, img.metadata.transform);
+                    // console.log(`✅ Found transform for image ${img.id}:`, img.metadata.transform);
                     transforms[img.id] = img.metadata.transform;
                 } else {
-                    console.log(`❌ No transform found for image ${img.id}`);
+                    // console.log(`❌ No transform found for image ${img.id}`);
                 }
             });
 
-            console.log('Final transforms object:', transforms);
+            // console.log('Final transforms object:', transforms);
             setImageTransforms(transforms);
         } else {
-            console.log('No images to load transforms from');
+            // console.log('No images to load transforms from');
         }
     }, [images]);
 
@@ -205,11 +232,11 @@ function CursorTrailGallery({
     // Preload all images before allowing interaction
     useEffect(() => {
         if (!images || images.length === 0) {
-            console.log('CursorTrailGallery: No images to preload');
+            // console.log('CursorTrailGallery: No images to preload');
             return;
         }
 
-        console.log('CursorTrailGallery: Starting preload for', images.length, 'images');
+        // console.log('CursorTrailGallery: Starting preload for', images.length, 'images');
 
         let loadedCount = 0;
         const totalImages = images.length;
@@ -219,7 +246,7 @@ function CursorTrailGallery({
             const url = img.url || img.src;
 
             if (!url) {
-                console.warn('CursorTrailGallery: Image missing URL:', img);
+                // console.warn('CursorTrailGallery: Image missing URL:', img);
                 loadedCount++;
                 setPreloadProgress(Math.round((loadedCount / totalImages) * 100));
                 return;
@@ -238,7 +265,7 @@ function CursorTrailGallery({
             };
             image.onerror = (e) => {
                 loadedCount++;
-                console.error(`CursorTrailGallery: Failed to load image:`, url, e);
+                // console.error(`CursorTrailGallery: Failed to load image:`, url, e);
                 setPreloadProgress(Math.round((loadedCount / totalImages) * 100));
             };
             image.src = url;
@@ -788,17 +815,17 @@ function CursorTrailGallery({
                         bottom: 'auto',
                         left: 'auto'
                     }),
-                    background: currentTheme.controlsBg || 'rgba(0,0,0,0.9)',
+                    background: currentTheme.bgAlt || (isDark ? 'rgba(0,0,0,0.9)' : 'rgba(245,243,239,0.9)'),
                     padding: isMobile ? '12px 16px' : '24px',
                     borderRadius: isMobile ? '10px' : '12px',
-                    border: '2px solid #a89c8e',
+                    border: `2px solid ${currentTheme.border}`,
                     zIndex: 100,
                     minWidth: isMobile ? '90%' : '240px',
                     maxWidth: isMobile ? '90%' : '320px',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.4)'
+                    boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.4)' : '0 8px 32px rgba(0,0,0,0.12)'
                 }}>
                     <div style={{
-                        color: currentTheme.controlsText,
+                        color: currentTheme.text,
                         marginBottom: isMobile ? 10 : 20,
                         fontSize: isMobile ? 13 : 16,
                         fontWeight: 'bold',
@@ -810,7 +837,7 @@ function CursorTrailGallery({
                     {/* Scale Control */}
                     <div style={{marginBottom: isMobile ? 10 : 20}}>
                         <div style={{
-                            color: currentTheme.controlsText,
+                            color: currentTheme.text,
                             fontSize: isMobile ? 11 : 12,
                             marginBottom: 8,
                             fontWeight: 'bold',
@@ -823,9 +850,9 @@ function CursorTrailGallery({
                                 onClick={() => handleScaleChange(selectedImage.id, -0.1)}
                                 disabled={(imageTransforms[selectedImage.id]?.scale || 1.0) <= 0.5}
                                 style={{
-                                    background: 'rgba(255,255,255,0.15)',
-                                    border: '1px solid rgba(255,255,255,0.3)',
-                                    color: currentTheme.controlsText,
+                                    background: currentTheme.bg,
+                                    border: `1px solid ${currentTheme.border}`,
+                                    color: currentTheme.text,
                                     padding: isMobile ? '10px 12px' : '10px 14px',
                                     borderRadius: '6px',
                                     cursor: 'pointer',
@@ -837,7 +864,7 @@ function CursorTrailGallery({
                                 <ZoomOut size={isMobile ? 16 : 18}/>
                             </button>
                             <span style={{
-                                color: currentTheme.controlsText,
+                                color: currentTheme.text,
                                 fontSize: isMobile ? 14 : 16,
                                 minWidth: 50,
                                 textAlign: 'center',
@@ -849,9 +876,9 @@ function CursorTrailGallery({
                                 onClick={() => handleScaleChange(selectedImage.id, 0.1)}
                                 disabled={(imageTransforms[selectedImage.id]?.scale || 1.0) >= 3.0}
                                 style={{
-                                    background: 'rgba(255,255,255,0.15)',
-                                    border: '1px solid rgba(255,255,255,0.3)',
-                                    color: currentTheme.controlsText,
+                                    background: currentTheme.bg,
+                                    border: `1px solid ${currentTheme.border}`,
+                                    color: currentTheme.text,
                                     padding: isMobile ? '10px 12px' : '10px 14px',
                                     borderRadius: '6px',
                                     cursor: 'pointer',
@@ -877,9 +904,9 @@ function CursorTrailGallery({
                             style={{
                                 flex: isMobile ? 1 : 'none',
                                 width: isMobile ? 'auto' : '100%',
-                                background: 'rgba(255,255,255,0.15)',
-                                border: '1px solid rgba(255,255,255,0.3)',
-                                color: currentTheme.controlsText,
+                                background: currentTheme.bg,
+                                border: `1px solid ${currentTheme.border}`,
+                                color: currentTheme.text,
                                 padding: isMobile ? '10px 8px' : '12px',
                                 marginBottom: isMobile ? 0 : 20,
                                 borderRadius: '6px',
@@ -903,9 +930,9 @@ function CursorTrailGallery({
                             style={{
                                 flex: isMobile ? 1 : 'none',
                                 width: isMobile ? 'auto' : '100%',
-                                background: '#a89c8e',
+                                background: currentTheme.accent,
                                 border: 'none',
-                                color: '#0a0a0a',
+                                color: isDark ? '#0a0a0a' : '#f5f3ef',
                                 padding: isMobile ? '10px 8px' : '14px',
                                 borderRadius: '8px',
                                 cursor: 'pointer',
@@ -934,7 +961,7 @@ function CursorTrailGallery({
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        background: 'rgba(0, 0, 0, 0.95)',
+                        background: isDark ? 'rgba(0, 0, 0, 0.95)' : 'rgba(245, 243, 239, 0.95)',
                         zIndex: 200,
                         display: 'flex',
                         alignItems: 'center',
@@ -946,17 +973,17 @@ function CursorTrailGallery({
                 >
                     <div
                         style={{
-                            background: currentTheme.controlsBg || 'rgba(0,0,0,0.9)',
+                            background: currentTheme.bgAlt,
                             padding: isMobile ? '10px' : '12px',
                             borderRadius: isMobile ? '6px' : '8px',
-                            border: '2px solid #a89c8e',
+                            border: `2px solid ${currentTheme.border}`,
                             maxWidth: isMobile ? '100%' : '750px',
                             width: '100%',
                             maxHeight: '82vh',
                             display: 'flex',
                             flexDirection: 'column',
                             gap: isMobile ? '8px' : '10px',
-                            boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
+                            boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.2)',
                             overflow: 'hidden',
                             margin: 'auto'
                         }}
@@ -970,14 +997,14 @@ function CursorTrailGallery({
                             flexShrink: 0
                         }}>
                             <div style={{
-                                color: currentTheme.controlsText,
+                                color: currentTheme.text,
                                 fontSize: isMobile ? 14 : 14,
                                 fontWeight: 'bold',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: 5
                             }}>
-                                <Crop size={isMobile ? 14 : 14} style={{color: '#a89c8e'}}/>
+                                <Crop size={isMobile ? 14 : 14} style={{color: currentTheme.text}}/>
                                 Crop Image
                             </div>
                             <button
@@ -985,7 +1012,7 @@ function CursorTrailGallery({
                                 style={{
                                     background: 'transparent',
                                     border: 'none',
-                                    color: currentTheme.controlsText,
+                                    color: currentTheme.text,
                                     cursor: 'pointer',
                                     padding: '1px',
                                     display: 'flex',
@@ -1009,12 +1036,12 @@ function CursorTrailGallery({
                                 height: isMobile ? '40vh' : '320px',
                                 overflow: 'hidden',
                                 borderRadius: '4px',
-                                border: '1px solid rgba(255,255,255,0.1)',
+                                border: `1px solid ${currentTheme.border}`,
                                 flexShrink: 0,
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                background: '#000'
+                                background: isDark ? '#000' : '#f5f3ef'
                             }}
                         >
                             <img
@@ -1051,7 +1078,7 @@ function CursorTrailGallery({
                                         top: 0,
                                         width: '100%',
                                         height: '100%',
-                                        background: 'rgba(0, 0, 0, 0.6)',
+                                        background: isDark ? 'rgba(0, 0, 0, 0.6)' : 'rgba(42, 37, 32, 0.4)',
                                         clipPath: `
                                             polygon(
                                                 0% 0%,
@@ -1079,7 +1106,7 @@ function CursorTrailGallery({
                                     top: `${imageRect.top + cropArea.y / 100 * imageRect.height}px`,
                                     width: `${imageRect.width * cropArea.width / 100}px`,
                                     height: `${imageRect.height * cropArea.height / 100}px`,
-                                    border: '3px solid #a89c8e',
+                                    border: `3px solid ${currentTheme.text}`,
                                     boxSizing: 'border-box',
                                     boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0)',
                                     cursor: 'move'
@@ -1094,7 +1121,7 @@ function CursorTrailGallery({
                                     left: 0,
                                     width: '100%',
                                     height: '1px',
-                                    background: 'rgba(168, 156, 142, 0.5)',
+                                    background: isDark ? 'rgba(168, 156, 142, 0.5)' : 'rgba(42, 37, 32, 0.3)',
                                     pointerEvents: 'none'
                                 }}/>
                                 <div style={{
@@ -1103,7 +1130,7 @@ function CursorTrailGallery({
                                     left: 0,
                                     width: '100%',
                                     height: '1px',
-                                    background: 'rgba(168, 156, 142, 0.5)',
+                                    background: isDark ? 'rgba(168, 156, 142, 0.5)' : 'rgba(42, 37, 32, 0.3)',
                                     pointerEvents: 'none'
                                 }}/>
                                 <div style={{
@@ -1112,7 +1139,7 @@ function CursorTrailGallery({
                                     top: 0,
                                     height: '100%',
                                     width: '1px',
-                                    background: 'rgba(168, 156, 142, 0.5)',
+                                    background: isDark ? 'rgba(168, 156, 142, 0.5)' : 'rgba(42, 37, 32, 0.3)',
                                     pointerEvents: 'none'
                                 }}/>
                                 <div style={{
@@ -1121,7 +1148,7 @@ function CursorTrailGallery({
                                     top: 0,
                                     height: '100%',
                                     width: '1px',
-                                    background: 'rgba(168, 156, 142, 0.5)',
+                                    background: isDark ? 'rgba(168, 156, 142, 0.5)' : 'rgba(42, 37, 32, 0.3)',
                                     pointerEvents: 'none'
                                 }}/>
 
@@ -1133,8 +1160,8 @@ function CursorTrailGallery({
                                         left: '-6px',
                                         width: isMobile ? '20px' : '16px',
                                         height: isMobile ? '20px' : '16px',
-                                        background: '#a89c8e',
-                                        border: '2px solid #fff',
+                                        background: currentTheme.text,
+                                        border: `2px solid ${currentTheme.bg}`,
                                         borderRadius: '50%',
                                         cursor: 'nw-resize',
                                         boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
@@ -1149,8 +1176,8 @@ function CursorTrailGallery({
                                         right: '-6px',
                                         width: isMobile ? '20px' : '16px',
                                         height: isMobile ? '20px' : '16px',
-                                        background: '#a89c8e',
-                                        border: '2px solid #fff',
+                                        background: currentTheme.text,
+                                        border: `2px solid ${currentTheme.bg}`,
                                         borderRadius: '50%',
                                         cursor: 'ne-resize',
                                         boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
@@ -1165,8 +1192,8 @@ function CursorTrailGallery({
                                         left: '-6px',
                                         width: isMobile ? '20px' : '16px',
                                         height: isMobile ? '20px' : '16px',
-                                        background: '#a89c8e',
-                                        border: '2px solid #fff',
+                                        background: currentTheme.text,
+                                        border: `2px solid ${currentTheme.bg}`,
                                         borderRadius: '50%',
                                         cursor: 'sw-resize',
                                         boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
@@ -1181,8 +1208,8 @@ function CursorTrailGallery({
                                         right: '-6px',
                                         width: isMobile ? '20px' : '16px',
                                         height: isMobile ? '20px' : '16px',
-                                        background: '#a89c8e',
-                                        border: '2px solid #fff',
+                                        background: currentTheme.text,
+                                        border: `2px solid ${currentTheme.bg}`,
                                         borderRadius: '50%',
                                         cursor: 'se-resize',
                                         boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
@@ -1200,8 +1227,8 @@ function CursorTrailGallery({
                                         transform: 'translateX(-50%)',
                                         width: isMobile ? '20px' : '16px',
                                         height: isMobile ? '20px' : '16px',
-                                        background: '#a89c8e',
-                                        border: '2px solid #fff',
+                                        background: currentTheme.text,
+                                        border: `2px solid ${currentTheme.bg}`,
                                         borderRadius: '50%',
                                         cursor: 'n-resize',
                                         boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
@@ -1217,8 +1244,8 @@ function CursorTrailGallery({
                                         transform: 'translateX(-50%)',
                                         width: isMobile ? '20px' : '16px',
                                         height: isMobile ? '20px' : '16px',
-                                        background: '#a89c8e',
-                                        border: '2px solid #fff',
+                                        background: currentTheme.text,
+                                        border: `2px solid ${currentTheme.bg}`,
                                         borderRadius: '50%',
                                         cursor: 's-resize',
                                         boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
@@ -1234,8 +1261,8 @@ function CursorTrailGallery({
                                         transform: 'translateY(-50%)',
                                         width: isMobile ? '20px' : '16px',
                                         height: isMobile ? '20px' : '16px',
-                                        background: '#a89c8e',
-                                        border: '2px solid #fff',
+                                        background: currentTheme.text,
+                                        border: `2px solid ${currentTheme.bg}`,
                                         borderRadius: '50%',
                                         cursor: 'w-resize',
                                         boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
@@ -1251,8 +1278,8 @@ function CursorTrailGallery({
                                         transform: 'translateY(-50%)',
                                         width: isMobile ? '20px' : '16px',
                                         height: isMobile ? '20px' : '16px',
-                                        background: '#a89c8e',
-                                        border: '2px solid #fff',
+                                        background: currentTheme.text,
+                                        border: `2px solid ${currentTheme.bg}`,
                                         borderRadius: '50%',
                                         cursor: 'e-resize',
                                         boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
@@ -1265,7 +1292,7 @@ function CursorTrailGallery({
 
                         {/* Instructions */}
                         <div style={{
-                            color: currentTheme.controlsText,
+                            color: currentTheme.textDim,
                             fontSize: isMobile ? 11 : 10,
                             textAlign: 'center',
                             opacity: 0.7,
@@ -1288,8 +1315,8 @@ function CursorTrailGallery({
                                 onClick={() => setShowCropModal(false)}
                                 style={{
                                     background: 'transparent',
-                                    border: '1px solid rgba(255,255,255,0.2)',
-                                    color: currentTheme.controlsText,
+                                    border: `1px solid ${currentTheme.border}`,
+                                    color: currentTheme.text,
                                     padding: isMobile ? '10px 18px' : '8px 16px',
                                     borderRadius: '5px',
                                     cursor: 'pointer',
@@ -1299,11 +1326,11 @@ function CursorTrailGallery({
                                     flex: isMobile ? '0 0 auto' : 'none'
                                 }}
                                 onMouseEnter={(e) => {
-                                    e.target.style.borderColor = 'rgba(255,255,255,0.4)';
-                                    e.target.style.background = 'rgba(255,255,255,0.05)';
+                                    e.target.style.borderColor = currentTheme.borderAlt;
+                                    e.target.style.background = currentTheme.bg;
                                 }}
                                 onMouseLeave={(e) => {
-                                    e.target.style.borderColor = 'rgba(255,255,255,0.2)';
+                                    e.target.style.borderColor = currentTheme.border;
                                     e.target.style.background = 'transparent';
                                 }}
                             >
@@ -1312,9 +1339,9 @@ function CursorTrailGallery({
                             <button
                                 onClick={handleApplyCrop}
                                 style={{
-                                    background: '#a89c8e',
+                                    background: currentTheme.accent,
                                     border: 'none',
-                                    color: '#0a0a0a',
+                                    color: isDark ? '#0a0a0a' : '#f5f3ef',
                                     padding: isMobile ? '10px 18px' : '8px 18px',
                                     borderRadius: '5px',
                                     cursor: 'pointer',
@@ -1324,15 +1351,15 @@ function CursorTrailGallery({
                                     alignItems: 'center',
                                     gap: 5,
                                     transition: 'all 0.2s',
-                                    boxShadow: '0 4px 12px rgba(168, 156, 142, 0.3)',
+                                    boxShadow: isDark ? '0 4px 12px rgba(168, 156, 142, 0.3)' : '0 4px 12px rgba(42, 37, 32, 0.2)',
                                     flex: isMobile ? '0 0 auto' : 'none'
                                 }}
                                 onMouseEnter={(e) => {
-                                    e.target.style.background = '#b8ac9e';
+                                    e.target.style.background = currentTheme.accentHover;
                                     e.target.style.transform = 'translateY(-1px)';
                                 }}
                                 onMouseLeave={(e) => {
-                                    e.target.style.background = '#a89c8e';
+                                    e.target.style.background = currentTheme.accent;
                                     e.target.style.transform = 'translateY(0)';
                                 }}
                             >
@@ -1370,169 +1397,186 @@ function CursorTrailGallery({
             )}
 
             {showControls && (
-                <div className={styles.controls}
-                     style={{backgroundColor: currentTheme.controlsBg, color: currentTheme.controlsText}}>
-                    {/* Editable Name */}
-                    {editMode ? (
-                        editingName ? (
-                            <div style={{display: 'flex', flexDirection: 'column', gap: 6}}>
-                                <input
-                                    type="text"
-                                    value={tempName}
-                                    onChange={(e) => setTempName(e.target.value)}
-                                    placeholder="Name"
-                                    style={{
-                                        background: 'rgba(255,255,255,0.1)',
-                                        border: '1px solid rgba(255,255,255,0.2)',
-                                        color: currentTheme.controlsText,
-                                        padding: '4px 8px',
-                                        borderRadius: '4px',
-                                        fontSize: 12,
-                                        outline: 'none'
-                                    }}
-                                />
-                                <input
-                                    type="url"
-                                    value={tempNameLink}
-                                    onChange={(e) => setTempNameLink(e.target.value)}
-                                    placeholder="Link (optional)"
-                                    style={{
-                                        background: 'rgba(255,255,255,0.1)',
-                                        border: '1px solid rgba(255,255,255,0.2)',
-                                        color: currentTheme.controlsText,
-                                        padding: '4px 8px',
-                                        borderRadius: '4px',
-                                        fontSize: 12,
-                                        outline: 'none'
-                                    }}
-                                />
-                                <button
+                <div
+                    className={styles.controls}
+                    style={{
+                        backgroundColor: currentTheme.controlsBg,
+                        color: currentTheme.controlsText,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                    }}
+                >
+                    {/* Left side - Editable Name */}
+                    <div style={{flex: 1, display: 'flex', justifyContent: 'flex-start'}}>
+                        {editMode ? (
+                            editingName ? (
+                                <div style={{display: 'flex', flexDirection: 'column', gap: 6}}>
+                                    <input
+                                        type="text"
+                                        value={tempName}
+                                        onChange={(e) => setTempName(e.target.value)}
+                                        placeholder="Name"
+                                        style={{
+                                            background: 'rgba(255,255,255,0.1)',
+                                            border: '1px solid rgba(255,255,255,0.2)',
+                                            color: currentTheme.controlsText,
+                                            padding: '4px 8px',
+                                            borderRadius: '4px',
+                                            fontSize: 12,
+                                            outline: 'none'
+                                        }}
+                                    />
+                                    <input
+                                        type="url"
+                                        value={tempNameLink}
+                                        onChange={(e) => setTempNameLink(e.target.value)}
+                                        placeholder="Link (optional)"
+                                        style={{
+                                            background: 'rgba(255,255,255,0.1)',
+                                            border: '1px solid rgba(255,255,255,0.2)',
+                                            color: currentTheme.controlsText,
+                                            padding: '4px 8px',
+                                            borderRadius: '4px',
+                                            fontSize: 12,
+                                            outline: 'none'
+                                        }}
+                                    />
+                                    <button
+                                        onClick={() => {
+                                            setCustomName(tempName);
+                                            setCustomNameLink(tempNameLink);
+                                            setPendingChanges(true);
+                                            setEditingName(false);
+                                        }}
+                                        style={{
+                                            background: '#a89c8e',
+                                            border: 'none',
+                                            color: '#0a0a0a',
+                                            padding: '4px 8px',
+                                            borderRadius: '4px',
+                                            cursor: 'pointer',
+                                            fontSize: 10,
+                                            fontWeight: 'bold'
+                                        }}
+                                    >
+                                        OK
+                                    </button>
+                                </div>
+                            ) : (
+                                <div
                                     onClick={() => {
-                                        setCustomName(tempName);
-                                        setCustomNameLink(tempNameLink);
-                                        setPendingChanges(true);
-                                        setEditingName(false);
+                                        setTempName(customName);
+                                        setTempNameLink(customNameLink);
+                                        setEditingName(true);
                                     }}
+                                    style={{cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6}}
+                                    className={styles.label}
+                                >
+                                    <span style={{color: currentTheme.controlsText}}>
+                                        {customName || 'Click to edit name'}
+                                    </span>
+                                    <Edit3 size={12} style={{opacity: 0.5}}/>
+                                </div>
+                            )
+                        ) : (
+                            customNameLink ? (
+                                <a
+                                    href={customNameLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={styles.label}
                                     style={{
-                                        background: '#a89c8e',
-                                        border: 'none',
-                                        color: '#0a0a0a',
-                                        padding: '4px 8px',
-                                        borderRadius: '4px',
-                                        cursor: 'pointer',
-                                        fontSize: 10,
-                                        fontWeight: 'bold'
+                                        color: currentTheme.controlsText,
+                                        display: customName ? 'flex' : 'none',
+                                        alignItems: 'center',
+                                        gap: 4
                                     }}
                                 >
-                                    OK
-                                </button>
-                            </div>
-                        ) : (
-                            <div
-                                onClick={() => {
-                                    setTempName(customName);
-                                    setTempNameLink(customNameLink);
-                                    setEditingName(true);
-                                }}
-                                style={{cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6}}
-                                className={styles.label}
-                            >
-                                <span style={{color: currentTheme.controlsText}}>
-                                    {customName || 'Click to edit name'}
-                                </span>
-                                <Edit3 size={12} style={{opacity: 0.5}}/>
-                            </div>
-                        )
-                    ) : (
-                        customNameLink ? (
-                            <a
-                                href={customNameLink}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={styles.label}
-                                style={{
-                                    color: currentTheme.controlsText,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 4
-                                }}
-                            >
-                                {customName || 'manas.'}
-                                <ExternalLink size={12} style={{opacity: 0.6}}/>
-                            </a>
-                        ) : (
-                            <span className={styles.label} style={{color: currentTheme.controlsText}}>
-                                {customName || 'manas.'}
-                            </span>
-                        )
-                    )}
+                                    {customName}
+                                    <ExternalLink size={12} style={{opacity: 0.6}}/>
+                                </a>
+                            ) : (
+                                customName && (
+                                    <span className={styles.label} style={{color: currentTheme.controlsText}}>
+                                        {customName}
+                                    </span>
+                                )
+                            )
+                        )}
+                    </div>
 
-                    <div className={styles.threshold}>
+                    {/* Center - Threshold */}
+                    <div className={styles.threshold} style={{flex: '0 0 auto'}}>
                         <span style={{color: currentTheme.controlsText}}>Threshold: </span>
                         <button onClick={DecThreshold} className={styles.adjustBtn}>-</button>
                         <span className={styles.value} style={{color: currentTheme.controlsText}}>{threshold}</span>
                         <button onClick={IncThreshold} className={styles.adjustBtn}>+</button>
                     </div>
 
-                    {/* Editable Email */}
-                    {editMode ? (
-                        editingEmail ? (
-                            <div style={{display: 'flex', gap: 6, alignItems: 'center'}}>
-                                <input
-                                    type="email"
-                                    value={tempEmail}
-                                    onChange={(e) => setTempEmail(e.target.value)}
-                                    placeholder="Email"
-                                    style={{
-                                        background: 'rgba(255,255,255,0.1)',
-                                        border: '1px solid rgba(255,255,255,0.2)',
-                                        color: currentTheme.controlsText,
-                                        padding: '4px 8px',
-                                        borderRadius: '4px',
-                                        fontSize: 12,
-                                        outline: 'none'
-                                    }}
-                                />
-                                <button
+                    {/* Right side - Editable Email */}
+                    <div style={{flex: 1, display: 'flex', justifyContent: 'flex-end'}}>
+                        {editMode ? (
+                            editingEmail ? (
+                                <div style={{display: 'flex', gap: 6, alignItems: 'center'}}>
+                                    <input
+                                        type="email"
+                                        value={tempEmail}
+                                        onChange={(e) => setTempEmail(e.target.value)}
+                                        placeholder="Email"
+                                        style={{
+                                            background: 'rgba(255,255,255,0.1)',
+                                            border: '1px solid rgba(255,255,255,0.2)',
+                                            color: currentTheme.controlsText,
+                                            padding: '4px 8px',
+                                            borderRadius: '4px',
+                                            fontSize: 12,
+                                            outline: 'none'
+                                        }}
+                                    />
+                                    <button
+                                        onClick={() => {
+                                            setCustomEmail(tempEmail);
+                                            setPendingChanges(true);
+                                            setEditingEmail(false);
+                                        }}
+                                        style={{
+                                            background: '#a89c8e',
+                                            border: 'none',
+                                            color: '#0a0a0a',
+                                            padding: '4px 8px',
+                                            borderRadius: '4px',
+                                            cursor: 'pointer',
+                                            fontSize: 10,
+                                            fontWeight: 'bold'
+                                        }}
+                                    >
+                                        OK
+                                    </button>
+                                </div>
+                            ) : (
+                                <div
                                     onClick={() => {
-                                        setCustomEmail(tempEmail);
-                                        setPendingChanges(true);
-                                        setEditingEmail(false);
+                                        setTempEmail(customEmail);
+                                        setEditingEmail(true);
                                     }}
-                                    style={{
-                                        background: '#a89c8e',
-                                        border: 'none',
-                                        color: '#0a0a0a',
-                                        padding: '4px 8px',
-                                        borderRadius: '4px',
-                                        cursor: 'pointer',
-                                        fontSize: 10,
-                                        fontWeight: 'bold'
-                                    }}
+                                    style={{cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6}}
+                                    className={styles.label}
                                 >
-                                    OK
-                                </button>
-                            </div>
+                                    <span style={{color: currentTheme.controlsText}}>
+                                        {customEmail || 'Click to edit email'}
+                                    </span>
+                                    <Edit3 size={12} style={{opacity: 0.5}}/>
+                                </div>
+                            )
                         ) : (
-                            <div
-                                onClick={() => {
-                                    setTempEmail(customEmail);
-                                    setEditingEmail(true);
-                                }}
-                                style={{cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6}}
-                                className={styles.label}
-                            >
-                                <span style={{color: currentTheme.controlsText}}>
-                                    {customEmail || 'Click to edit email'}
+                            customEmail && (
+                                <span className={styles.label} style={{color: currentTheme.controlsText}}>
+                                    {customEmail}
                                 </span>
-                                <Edit3 size={12} style={{opacity: 0.5}}/>
-                            </div>
-                        )
-                    ) : (
-                        <span className={styles.label} style={{color: currentTheme.controlsText}}>
-                            {customEmail || 'saxenamanas04@gmail.com'}
-                        </span>
-                    )}
+                            )
+                        )}
+                    </div>
                 </div>
             )}
 

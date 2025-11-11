@@ -16,7 +16,10 @@ load_dotenv()
 
 app = Flask(__name__)
 # Enable CORS for all routes, allowing your React app to make requests
-CORS(app, resources={r"/api/*": {"origins": "*"}})
+# Production: Will be restricted via environment variable
+# Development: Allows all origins for local testing
+allowed_origins = os.environ.get("CORS_ORIGINS", "*").split(",")
+CORS(app, resources={r"/api/*": {"origins": allowed_origins if allowed_origins != ["*"] else "*"}})
 
 # Get Supabase URL and Key from environment variables
 SUPABASE_URL = os.environ.get("SUPABASE_URL")

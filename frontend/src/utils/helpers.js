@@ -139,7 +139,7 @@ export const storage = {
             const item = localStorage.getItem(key);
             return item ? JSON.parse(item) : defaultValue;
         } catch (error) {
-            console.error('Error reading from localStorage:', error);
+            // console.error('Error reading from localStorage:', error);
             return defaultValue;
         }
     },

@@ -8,9 +8,11 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "optimize-images": "node optimize-images.js"
+    "optimize-images": "node optimize-images.js",
+    "vercel-build": "vite build"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.80.0",
     "axios": "^1.6.2",
     "browser-image-compression": "^2.0.2",
     "framer-motion": "^10.16.5",

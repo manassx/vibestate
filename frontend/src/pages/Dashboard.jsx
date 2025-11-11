@@ -39,16 +39,45 @@ const Dashboard = () => {
                 setPortfolio(null);
             }
         }).catch(err => {
-            console.error('Error fetching portfolio:', err);
+            // console.error('Error fetching portfolio:', err);
             toast.error('Failed to load portfolio');
         });
     }, []);
 
-    const handleShare = () => {
+    const handleShare = async () => {
         if (portfolio) {
             const shareUrl = `${window.location.origin}/gallery/${portfolio.id}`;
-            navigator.clipboard.writeText(shareUrl);
-            toast.success('Portfolio link copied to clipboard!');
+
+            try {
+                // Try the modern Clipboard API first
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(shareUrl);
+                    toast.success('Portfolio link copied to clipboard!');
+                } else {
+                    // Fallback for older browsers or non-secure contexts
+                    const textArea = document.createElement('textarea');
+                    textArea.value = shareUrl;
+                    textArea.style.position = 'fixed';
+                    textArea.style.left = '-999999px';
+                    textArea.style.top = '-999999px';
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+
+                    try {
+                        document.execCommand('copy');
+                        textArea.remove();
+                        toast.success('Portfolio link copied to clipboard!');
+                    } catch (err) {
+                        textArea.remove();
+                        // Last resort: show the URL in a prompt
+                        prompt('Copy this link:', shareUrl);
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to copy:', err);
+                toast.error('Failed to copy link. Please try again.');
+            }
         }
     };
 
@@ -63,7 +92,7 @@ const Dashboard = () => {
             setPortfolio(null);
             toast.success('Portfolio deleted');
         } catch (err) {
-            console.error('Error deleting gallery:', err);
+            // console.error('Error deleting gallery:', err);
             toast.error('Failed to delete portfolio');
         }
     };
@@ -756,7 +785,6 @@ const Dashboard = () => {
                     }
                 }
 
-                /* Text selection styling */
                 ::selection {
                     background-color: ${isDark ? '#e8e8e8' : '#2a2520'};
                     color: ${isDark ? '#0a0a0a' : '#f5f3ef'};

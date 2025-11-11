@@ -9,6 +9,17 @@ const FileUploadZone = ({onFilesSelected, maxFiles = GALLERY_CONFIG.MAX_IMAGES})
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [errors, setErrors] = useState([]);
     const {isDark, currentTheme} = useTheme();
+    const [isMobile, setIsMobile] = useState(false);
+
+    // Detect mobile device
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth <= 768 || 'ontouchstart' in window);
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     const onDrop = useCallback((acceptedFiles, rejectedFiles) => {
         setErrors([]);
@@ -103,47 +114,76 @@ const FileUploadZone = ({onFilesSelected, maxFiles = GALLERY_CONFIG.MAX_IMAGES})
 
     return (
         <div className="w-full">
-            {/* Upload Zone */}
-            <div
-                {...getRootProps()}
-                className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all duration-300"
-                style={{
-                    borderColor: isDragActive ? currentTheme.accent : currentTheme.border,
-                    backgroundColor: isDragActive ? (isDark ? 'rgba(232, 232, 232, 0.05)' : 'rgba(42, 37, 32, 0.03)') : 'transparent'
-                }}
-            >
-                <input {...getInputProps()} />
+            {/* Upload Zone - Only show if no files selected yet */}
+            {selectedFiles.length === 0 && (
+                <div
+                    {...getRootProps()}
+                    className="border-2 border-dashed rounded-lg p-6 md:p-8 text-center cursor-pointer transition-all duration-300"
+                    style={{
+                        borderColor: isDragActive ? currentTheme.accent : currentTheme.border,
+                        backgroundColor: isDragActive ? (isDark ? 'rgba(232, 232, 232, 0.05)' : 'rgba(42, 37, 32, 0.03)') : 'transparent'
+                    }}
+                >
+                    <input {...getInputProps()} />
 
-                <Upload
-                    className="w-12 h-12 mx-auto mb-4 transition-colors duration-300"
-                    style={{color: isDragActive ? currentTheme.accent : currentTheme.textDim}}
-                />
+                    <Upload
+                        className="w-10 h-10 md:w-12 md:h-12 mx-auto mb-3 md:mb-4 transition-colors duration-300"
+                        style={{color: isDragActive ? currentTheme.accent : currentTheme.textDim}}
+                    />
 
-                {isDragActive ? (
-                    <p
-                        className="text-lg font-bold tracking-wide transition-colors duration-300"
-                        style={{color: currentTheme.accent}}
-                    >
-                        Drop your images here...
-                    </p>
-                ) : (
-                    <>
+                    {isDragActive ? (
                         <p
-                            className="text-lg font-bold mb-2 transition-colors duration-500"
-                            style={{color: currentTheme.text}}
+                            className="text-base md:text-lg font-bold tracking-wide transition-colors duration-300"
+                            style={{color: currentTheme.accent}}
                         >
-                            Drag & drop images here, or click to select
+                            Drop your images here...
                         </p>
-                        <p
-                            className="text-sm transition-colors duration-500"
-                            style={{color: currentTheme.textMuted}}
-                        >
-                            Upload {GALLERY_CONFIG.MIN_IMAGES}-{GALLERY_CONFIG.MAX_IMAGES} images
-                            (JPG, PNG, WebP - Max {formatFileSize(GALLERY_CONFIG.MAX_FILE_SIZE)} each)
-                        </p>
-                    </>
-                )}
-            </div>
+                    ) : (
+                        <>
+                            {/* Desktop: Show drag and drop text */}
+                            {!isMobile && (
+                                <>
+                                    <p
+                                        className="text-base md:text-lg font-bold mb-2 transition-colors duration-500"
+                                        style={{color: currentTheme.text}}
+                                    >
+                                        Drag & drop images here, or click to select
+                                    </p>
+                                    <p
+                                        className="text-xs md:text-sm transition-colors duration-500"
+                                        style={{color: currentTheme.textMuted}}
+                                    >
+                                        Upload up to {GALLERY_CONFIG.MAX_IMAGES} images (JPG, PNG, WebP -
+                                        Max {formatFileSize(GALLERY_CONFIG.MAX_FILE_SIZE)} each)
+                                    </p>
+                                </>
+                            )}
+
+                            {/* Mobile: Show button-style interface */}
+                            {isMobile && (
+                                <>
+                                    <div
+                                        className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-bold text-sm tracking-wide mb-3"
+                                        style={{
+                                            backgroundColor: currentTheme.accent,
+                                            color: isDark ? '#0a0a0a' : '#f5f3ef'
+                                        }}
+                                    >
+                                        <Upload size={18}/>
+                                        <span>SELECT IMAGES</span>
+                                    </div>
+                                    <p
+                                        className="text-xs transition-colors duration-500"
+                                        style={{color: currentTheme.textMuted}}
+                                    >
+                                        Tap to choose up to {GALLERY_CONFIG.MAX_IMAGES} images
+                                    </p>
+                                </>
+                            )}
+                        </>
+                    )}
+                </div>
+            )}
 
             {/* Error Messages */}
             {errors.length > 0 && (

@@ -108,19 +108,19 @@ const useGalleryStore = create((set, get) => ({
     uploadImages: async (galleryId, files) => {
         set({uploadProgress: 0, error: null});
         try {
-            console.log('Starting upload for', files.length, 'files');
-            console.log('Gallery ID:', galleryId);
-            console.log('Files:', files.map(f => ({name: f.name, size: f.size, type: f.type})));
+            // console.log('Starting upload for', files.length, 'files');
+            // console.log('Gallery ID:', galleryId);
+            // console.log('Files:', files.map(f => ({name: f.name, size: f.size, type: f.type})));
 
             const formData = new FormData();
             files.forEach((file, index) => {
-                console.log(`Adding file ${index + 1}:`, file.name, file.size, 'bytes');
+                // console.log(`Adding file ${index + 1}:`, file.name, file.size, 'bytes');
                 formData.append('images', file);
             });
 
-            console.log('FormData created, making API call...');
+            // console.log('FormData created, making API call...');
             const result = await post(API_ENDPOINTS.GALLERIES.UPLOAD(galleryId), formData);
-            console.log('Upload result:', result);
+            // console.log('Upload result:', result);
 
             set({uploadProgress: 100});
 
@@ -132,11 +132,11 @@ const useGalleryStore = create((set, get) => ({
 
             return result;
         } catch (error) {
-            console.error('Upload error:', error);
-            console.error('Error details:', {
-                message: error.message,
-                stack: error.stack
-            });
+            // console.error('Upload error:', error);
+            // console.error('Error details:', {
+            //     message: error.message,
+            //     stack: error.stack
+            // });
             set({error: error.message, uploadProgress: 0});
             throw error;
         }

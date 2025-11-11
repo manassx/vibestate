@@ -9,14 +9,18 @@ import imageCompression from 'browser-image-compression';
  * @returns {Promise<File>} - Compressed image file
  */
 export async function compressImage(file, onProgress = null) {
+    // Detect mobile device
+    const isMobile = typeof window !== 'undefined' && (window.innerWidth <= 768 || 'ontouchstart' in window);
+
+    // More aggressive compression on mobile for faster uploads
     const options = {
-        maxSizeMB: 3, // Maximum file size in MB
-        maxWidthOrHeight: 4096, // Keep high resolution
-        useWebWorker: true, // Use web worker for better performance
-        quality: 0.95, // 95% quality - imperceptible loss
-        initialQuality: 0.95,
-        alwaysKeepResolution: true, // Maintain original resolution
-        preserveExif: true, // Keep photo metadata
+        maxSizeMB: isMobile ? 1 : 3, // 1MB on mobile, 3MB on desktop
+        maxWidthOrHeight: isMobile ? 2048 : 4096, // 2K on mobile, 4K on desktop
+        useWebWorker: !isMobile, // Disable web worker on mobile (causes errors), enable on desktop
+        quality: 0.92, // 92% quality - excellent quality
+        initialQuality: 0.92,
+        alwaysKeepResolution: false, // Allow resizing
+        preserveExif: false, // Remove metadata to save space
         onProgress: onProgress, // Progress callback
         fileType: file.type, // Preserve original format
     };
@@ -36,19 +40,26 @@ export async function compressImage(file, onProgress = null) {
 
         // If compression resulted in larger file, return original
         if (compressedFile.size > file.size) {
-            console.log(`Skipping compression for ${file.name} - original is smaller`);
+            console.log(`[Mobile Compression] Skipping ${file.name} - original is smaller`);
             return file;
         }
 
         const reductionPercent = ((1 - compressedFile.size / file.size) * 100).toFixed(1);
-        console.log(
-            `Compressed ${file.name}: ${formatBytes(file.size)} → ${formatBytes(compressedFile.size)} (${reductionPercent}% reduction)`
-        );
+
+        if (isMobile) {
+            console.log(
+                `[Mobile Compression] ${file.name}: ${formatBytes(file.size)} → ${formatBytes(compressedFile.size)} (${reductionPercent}% reduction)`
+            );
+        }
 
         return compressedFile;
     } catch (error) {
-        console.error('Compression failed for', file.name, error);
+        console.error(`[Compression Error] Failed to compress ${file.name}:`, error.message || error);
+
         // Return original file if compression fails
+        if (isMobile) {
+            console.log(`[Mobile] Using original file due to compression error`);
+        }
         return file;
     }
 }
@@ -90,9 +101,9 @@ export async function compressImages(files, onTotalProgress = null) {
     const compressedSize = compressedFiles.reduce((sum, f) => sum + f.size, 0);
     const savedPercent = ((1 - compressedSize / originalSize) * 100).toFixed(1);
 
-    console.log(
-        `✅ Compressed ${files.length} images: ${formatBytes(originalSize)} → ${formatBytes(compressedSize)} (${savedPercent}% smaller)`
-    );
+    // console.log(
+    //     `✅ Compressed ${files.length} images: ${formatBytes(originalSize)} → ${formatBytes(compressedSize)} (${savedPercent}% smaller)`
+    // );
 
     return compressedFiles;
 }

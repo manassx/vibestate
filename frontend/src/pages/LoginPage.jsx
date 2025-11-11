@@ -155,17 +155,17 @@ const LoginPage = () => {
             // This ensures users can choose which account to use every time
             const authUrl = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}&prompt=select_account`;
 
-            console.log('=== GOOGLE SIGN IN ===');
-            console.log('Current origin:', currentOrigin);
-            console.log('Redirect URL:', redirectTo);
-            console.log('Auth URL:', authUrl);
-            console.log('======================');
+            // console.log('=== GOOGLE SIGN IN ===');
+            // console.log('Current origin:', currentOrigin);
+            // console.log('Redirect URL:', redirectTo);
+            // console.log('Auth URL:', authUrl);
+            // console.log('======================');
 
             // Redirect to Supabase Google OAuth
             window.location.href = authUrl;
 
         } catch (error) {
-            console.error('Google sign-in error:', error);
+            // console.error('Google sign-in error:', error);
             toast.error('Failed to sign in with Google');
         }
     };

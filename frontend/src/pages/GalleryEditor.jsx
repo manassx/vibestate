@@ -38,19 +38,19 @@ const GalleryEditor = () => {
 
             // Fetch gallery from backend
             const galleryData = await apiGet(`/api/galleries/${id}`);
-            console.log('===== GALLERY EDITOR: Loaded gallery data =====');
-            console.log('Gallery:', galleryData);
-            console.log('Gallery images:', galleryData.images);
+            // console.log('===== GALLERY EDITOR: Loaded gallery data =====');
+            // console.log('Gallery:', galleryData);
+            // console.log('Gallery images:', galleryData.images);
 
             // Log each image's metadata
-            galleryData.images.forEach((img, idx) => {
-                console.log(`Image ${idx}:`, {
-                    id: img.id,
-                    url: img.url,
-                    metadata: img.metadata,
-                    hasTransform: !!(img.metadata && img.metadata.transform)
-                });
-            });
+            // galleryData.images.forEach((img, idx) => {
+            //     console.log(`Image ${idx}:`, {
+            //         id: img.id,
+            //         url: img.url,
+            //         metadata: img.metadata,
+            //         hasTransform: !!(img.metadata && img.metadata.transform)
+            //     });
+            // });
 
             // Transform images to the format expected by CursorTrailGallery
             const formattedGallery = {
@@ -72,12 +72,12 @@ const GalleryEditor = () => {
                 },
             };
 
-            console.log('Formatted gallery:', formattedGallery);
-            console.log('Formatted images with metadata:', formattedGallery.images);
+            // console.log('Formatted gallery:', formattedGallery);
+            // console.log('Formatted images with metadata:', formattedGallery.images);
             setGallery(formattedGallery);
             setLoading(false);
         } catch (err) {
-            console.error('Error loading gallery:', err);
+            // console.error('Error loading gallery:', err);
             setError(err.message || 'Failed to load portfolio');
             setLoading(false);
             toast.error('Failed to load portfolio');
@@ -90,7 +90,7 @@ const GalleryEditor = () => {
             toast.success('Portfolio published!');
             setGallery(prev => ({...prev, status: 'published'}));
         } catch (err) {
-            console.error('Error publishing gallery:', err);
+            // console.error('Error publishing gallery:', err);
             toast.error('Failed to publish portfolio');
         }
     };
@@ -353,6 +353,8 @@ const GalleryEditor = () => {
                     setIsSaving(saving);
                 }}
                 theme={{
+                    ...currentTheme,
+                    isDark: isDark,
                     controlsBg: currentTheme.bg,
                     controlsText: currentTheme.text
                 }}

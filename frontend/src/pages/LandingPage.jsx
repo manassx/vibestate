@@ -445,6 +445,8 @@ const LandingPage = () => {
                                 showControls={false}
                                 clearOnLeave={true}
                                 theme={{
+                                    ...currentTheme,
+                                    isDark: isDark,
                                     controlsBg: currentTheme.controlsBg,
                                     controlsText: currentTheme.controlsText
                                 }}

@@ -72,7 +72,7 @@ const Settings = () => {
                 api.get('/api/auth/me').then(res => res.user).catch(() => null)
             ]);
 
-            console.log('Fetched settings:', settingsData);
+            // console.log('Fetched settings:', settingsData);
             if (settingsData) {
                 if (settingsData.profile) {
                     setProfile(prev => ({
@@ -92,7 +92,7 @@ const Settings = () => {
                             Math.abs(curr - threshold) < Math.abs(prev - threshold) ? curr : prev
                         );
                     }
-                    console.log('Loading threshold from DB:', threshold);
+                    // console.log('Loading threshold from DB:', threshold);
                     setPreferences({
                         emailNotifications: settingsData.preferences.emailNotifications !== false,
                         browserNotifications: settingsData.preferences.browserNotifications === true,
@@ -107,7 +107,7 @@ const Settings = () => {
                 }
             }
         } catch (error) {
-            console.error('Error fetching settings:', error);
+            // console.error('Error fetching settings:', error);
             // Don't show error toast on initial fetch if settings don't exist yet
         } finally {
             setIsLoading(false);
@@ -117,7 +117,7 @@ const Settings = () => {
     const handleSaveProfile = async () => {
         setIsSaving(true);
         try {
-            console.log('Saving profile:', profile);
+            // console.log('Saving profile:', profile);
             await api.put('/api/user/profile', {
                 name: profile.name,
                 bio: profile.bio,
@@ -129,18 +129,18 @@ const Settings = () => {
             try {
                 const userData = await api.get('/api/auth/me');
                 if (userData && userData.user) {
-                    console.log('Updating auth store with fresh data:', userData.user);
+                    // console.log('Updating auth store with fresh data:', userData.user);
                     updateUser(userData.user);
                 }
             } catch (e) {
-                console.log('Could not fetch updated user data');
+                // console.log('Could not fetch updated user data');
                 // Fallback: just update name
                 updateUser({name: profile.name});
             }
 
             toast.success('Profile updated successfully!');
         } catch (error) {
-            console.error('Error saving profile:', error);
+            // console.error('Error saving profile:', error);
             toast.error(error.response?.data?.error || error.message || 'Failed to update profile');
         } finally {
             setIsSaving(false);
@@ -183,7 +183,7 @@ const Settings = () => {
     const handleSavePreferences = async () => {
         setIsSaving(true);
         try {
-            console.log('Saving preferences:', preferences);
+            // console.log('Saving preferences:', preferences);
 
             // Step 1: Save preferences to database
             toast.loading('Saving preferences...', {id: 'save-prefs'});
@@ -211,7 +211,7 @@ const Settings = () => {
             }
 
         } catch (error) {
-            console.error('Error saving preferences:', error);
+            // console.error('Error saving preferences:', error);
             toast.error(error.message || 'Failed to update', {id: 'save-prefs'});
             toast.dismiss('apply-threshold');
         } finally {

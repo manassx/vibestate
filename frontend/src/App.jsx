@@ -37,7 +37,7 @@ function AppContent() {
                         updateUser(response.user);
                     }
                 } catch (error) {
-                    console.error('Error fetching fresh user data:', error);
+                    // console.error('Error fetching fresh user data:', error);
                 }
             }
         };

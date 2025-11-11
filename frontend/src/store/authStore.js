@@ -110,7 +110,7 @@ const useAuthStore = create(
                     ...currentUser,
                     ...userData
                 };
-                console.log('Updating user in store:', updatedUser);
+                // console.log('Updating user in store:', updatedUser);
                 set({
                     user: updatedUser
                 });
