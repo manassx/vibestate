@@ -11,9 +11,17 @@
     {
       "src": "backend/api/index.py",
       "use": "@vercel/python"
+    },
+    {
+      "src": "backend/api/test.py",
+      "use": "@vercel/python"
     }
   ],
   "routes": [
+    {
+      "src": "/api/test",
+      "dest": "/backend/api/test.py"
+    },
     {
       "src": "/api/(.*)",
       "dest": "/backend/api/index.py"
