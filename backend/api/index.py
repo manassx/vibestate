@@ -7,8 +7,11 @@ WITHOUT modifying the original Flask app.
 import sys
 import os
 
-# Add parent directory to path so we can import app.py
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+# Add backend directory to path so we can import app.py
+# backend/api/index.py -> go up one level to backend/
+backend_dir = os.path.dirname(os.path.abspath(__file__))  # Gets backend/api/
+backend_dir = os.path.dirname(backend_dir)  # Gets backend/
+sys.path.insert(0, backend_dir)
 
 # Import the Flask app from app.py
 from app import app
