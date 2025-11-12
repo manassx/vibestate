@@ -174,7 +174,30 @@ def create_thumbnail(image_data):
 @app.route("/")
 def home():
     """A simple route to check if the backend is running."""
+    print("[HOME] Root endpoint accessed")
     return jsonify({"message": "CursorGallery API is running!", "version": "1.0.0"})
+
+@app.route("/api/debug", methods=["GET"])
+def debug_info():
+    """Debug endpoint to check environment configuration"""
+    print("[DEBUG] Debug endpoint accessed")
+    
+    env_status = {
+        "SUPABASE_URL": bool(os.environ.get("SUPABASE_URL")),
+        "SUPABASE_KEY": bool(os.environ.get("SUPABASE_KEY")),
+        "GOOGLE_AUTH_SALT": bool(os.environ.get("GOOGLE_AUTH_SALT")),
+        "CORS_ORIGINS": os.environ.get("CORS_ORIGINS", "*"),
+        "PIL_AVAILABLE": PIL_AVAILABLE,
+        "python_version": f"{os.sys.version_info.major}.{os.sys.version_info.minor}.{os.sys.version_info.micro}",
+    }
+    
+    print(f"[DEBUG] Environment status: {env_status}")
+    
+    return jsonify({
+        "status": "ok",
+        "environment": env_status,
+        "message": "Backend is operational"
+    }), 200
 
 
 @app.route("/api/auth/google", methods=["POST"])
@@ -189,45 +212,65 @@ def google_auth():
     regardless of method, it is linked using the same password so login can happen from either side.
     """
     try:
+        print(f"[GOOGLE AUTH] ===== REQUEST STARTED =====")
+        print(f"[GOOGLE AUTH] Request headers: {dict(request.headers)}")
+        print(f"[GOOGLE AUTH] Request method: {request.method}")
+        print(f"[GOOGLE AUTH] Request path: {request.path}")
+        
         data = request.get_json()
+        print(f"[GOOGLE AUTH] Request body received: {bool(data)}")
+        
         if not data:
+            print(f"[GOOGLE AUTH] ERROR: No JSON data in request body")
             return jsonify({"error": "Missing JSON data"}), 400
 
         id_token = data.get("idToken")
         email = data.get("email")
         name = data.get("name", "User")
+        
+        print(f"[GOOGLE AUTH] Parsed data - Email: {email}, Name: {name}, Token present: {bool(id_token)}")
 
         if not id_token or not email:
+            print(f"[GOOGLE AUTH] ERROR: Missing required fields - idToken: {bool(id_token)}, email: {bool(email)}")
             return jsonify({"error": "Missing required fields (idToken, email)"}), 400
 
         # Use a consistent password hash for Google login (unify logic)
         secret_salt = os.environ.get("GOOGLE_AUTH_SALT", "cursor-gallery-google-auth-2024")
+        print(f"[GOOGLE AUTH] Salt configured: {bool(secret_salt)}")
+        
         password_hash = hashlib.sha256(f"{email}{secret_salt}".encode()).hexdigest()
         google_password = password_hash[:32]
+        print(f"[GOOGLE AUTH] Generated password hash for user")
 
         try:
+            print(f"[GOOGLE AUTH] Attempting sign-in with existing credentials...")
             res = supabase.auth.sign_in_with_password({
                 "email": email,
                 "password": google_password
             })
+            print(f"[GOOGLE AUTH] ✅ Sign-in successful for existing user")
 
             user = res.user
             session = res.session
 
             # Always update user metadata to latest name from Google
             try:
+                print(f"[GOOGLE AUTH] Updating user metadata...")
                 admin_supabase.auth.admin.update_user_by_id(
                     user.id,
                     {"user_metadata": {"full_name": name, "auth_provider": "google"}}
                 )
+                print(f"[GOOGLE AUTH] ✅ Metadata updated")
             except Exception as e:
-                pass  # Non-critical, ignore metadata update errors
+                print(f"[GOOGLE AUTH] ⚠️ Metadata update failed (non-critical): {str(e)}")
 
             # Always fetch latest user data
             try:
+                print(f"[GOOGLE AUTH] Fetching fresh user data...")
                 fresh_user_response = admin_supabase.auth.admin.get_user_by_id(user.id)
                 if fresh_user_response and fresh_user_response.user:
                     fresh_user = fresh_user_response.user
+                    print(f"[GOOGLE AUTH] ✅ Fresh user data fetched")
                     return jsonify({
                         "user": {
                             "id": fresh_user.id,
@@ -238,9 +281,10 @@ def google_auth():
                         "token": session.access_token
                     }), 200
             except Exception as e:
-                pass  # If metadata fetch fails, fallback below
+                print(f"[GOOGLE AUTH] ⚠️ Fresh user fetch failed (non-critical): {str(e)}")
 
             # Fallback on old token
+            print(f"[GOOGLE AUTH] ✅ Returning with existing token")
             return jsonify({
                 "user": {
                     "id": user.id,
@@ -251,8 +295,13 @@ def google_auth():
                 "token": session.access_token
             }), 200
 
-        except Exception:
+        except Exception as signin_error:
+            print(f"[GOOGLE AUTH] Sign-in failed, attempting account creation/unification...")
+            print(f"[GOOGLE AUTH] Sign-in error type: {type(signin_error).__name__}")
+            print(f"[GOOGLE AUTH] Sign-in error message: {str(signin_error)}")
+            
             try:
+                print(f"[GOOGLE AUTH] Fetching existing users to check for account...")
                 users_response = supabase.auth.admin.list_users()
                 existing_user = None
 
@@ -260,9 +309,11 @@ def google_auth():
                     for u in users_response:
                         if u.email == email:
                             existing_user = u
+                            print(f"[GOOGLE AUTH] Found existing user with email: {email}")
                             break
 
                 if existing_user:
+                    print(f"[GOOGLE AUTH] Unifying existing account...")
                     # Unify account (update password for Google login)
                     admin_supabase.auth.admin.update_user_by_id(
                         existing_user.id,
@@ -274,10 +325,13 @@ def google_auth():
                             }
                         }
                     )
+                    print(f"[GOOGLE AUTH] ✅ Account unified, attempting sign-in...")
+                    
                     final_signin = supabase.auth.sign_in_with_password({
                         "email": email,
                         "password": google_password
                     })
+                    print(f"[GOOGLE AUTH] ✅ Unified account sign-in successful")
 
                     try:
                         fresh_user_response = admin_supabase.auth.admin.get_user_by_id(final_signin.user.id)
@@ -293,7 +347,7 @@ def google_auth():
                                 "token": final_signin.session.access_token
                             }), 200
                     except Exception as e:
-                        pass  # metadata fetch error non-critical
+                        print(f"[GOOGLE AUTH] ⚠️ Fresh user fetch failed (non-critical): {str(e)}")
 
                     return jsonify({
                         "user": {
@@ -306,6 +360,7 @@ def google_auth():
                     }), 200
 
                 else:
+                    print(f"[GOOGLE AUTH] No existing user found, creating new account...")
                     # User does not exist, create new account
                     signup_res = supabase.auth.sign_up({
                         "email": email,
@@ -317,12 +372,14 @@ def google_auth():
                             }
                         }
                     })
+                    print(f"[GOOGLE AUTH] ✅ New account created")
 
                     user = signup_res.user
                     session = signup_res.session
 
                     if user:
                         try:
+                            print(f"[GOOGLE AUTH] Creating user settings...")
                             user_settings_data = {
                                 "user_id": user.id,
                                 "profile": {
@@ -343,14 +400,16 @@ def google_auth():
                                 }
                             }
                             supabase.table('user_settings').insert(user_settings_data).execute()
-                        except Exception:
-                            pass  # settings creation is non-critical
+                            print(f"[GOOGLE AUTH] ✅ User settings created")
+                        except Exception as settings_error:
+                            print(f"[GOOGLE AUTH] ⚠️ User settings creation failed (non-critical): {str(settings_error)}")
 
                     if session and session.access_token:
                         try:
                             fresh_user_response = admin_supabase.auth.admin.get_user_by_id(user.id)
                             if fresh_user_response and fresh_user_response.user:
                                 fresh_user = fresh_user_response.user
+                                print(f"[GOOGLE AUTH] ✅ New user account fully set up")
                                 return jsonify({
                                     "user": {
                                         "id": fresh_user.id,
@@ -361,7 +420,7 @@ def google_auth():
                                     "token": session.access_token
                                 }), 201
                         except Exception as e:
-                            pass  # fallback below
+                            print(f"[GOOGLE AUTH] ⚠️ Fresh user fetch failed (non-critical): {str(e)}")
 
                         return jsonify({
                             "user": {
@@ -373,11 +432,14 @@ def google_auth():
                             "token": session.access_token
                         }), 201
                     else:
+                        print(f"[GOOGLE AUTH] No session token after signup, attempting sign-in...")
                         try:
                             signin_res = supabase.auth.sign_in_with_password({
                                 "email": email,
                                 "password": google_password
                             })
+                            print(f"[GOOGLE AUTH] ✅ Post-signup sign-in successful")
+                            
                             try:
                                 fresh_user_response = admin_supabase.auth.admin.get_user_by_id(signin_res.user.id)
                                 if fresh_user_response and fresh_user_response.user:
@@ -392,7 +454,7 @@ def google_auth():
                                         "token": signin_res.session.access_token
                                     }), 201
                             except Exception as e:
-                                pass  # fallback
+                                print(f"[GOOGLE AUTH] ⚠️ Fresh user fetch failed (non-critical): {str(e)}")
 
                             return jsonify({
                                 "user": {
@@ -403,19 +465,43 @@ def google_auth():
                                 },
                                 "token": signin_res.session.access_token
                             }), 201
-                        except Exception:
+                        except Exception as post_signin_error:
+                            print(f"[GOOGLE AUTH] ❌ Post-signup sign-in failed")
+                            print(f"[GOOGLE AUTH] Error type: {type(post_signin_error).__name__}")
+                            print(f"[GOOGLE AUTH] Error: {str(post_signin_error)}")
                             return jsonify({
-                                "error": "Account created but email confirmation may be required. Please check your email or try logging in with email/password."
+                                "error": "Account created but email confirmation may be required. Please check your email or try logging in with email/password.",
+                                "details": str(post_signin_error)
                             }), 500
 
             except Exception as lookup_error:
-                return jsonify({"error": f"Authentication error: {str(lookup_error)}"}), 500
+                print(f"[GOOGLE AUTH] ❌ CRITICAL: Account lookup/creation failed")
+                print(f"[GOOGLE AUTH] Error type: {type(lookup_error).__name__}")
+                print(f"[GOOGLE AUTH] Error: {str(lookup_error)}")
+                import traceback
+                print(f"[GOOGLE AUTH] Traceback: {traceback.format_exc()}")
+                return jsonify({
+                    "error": f"Authentication error: {str(lookup_error)}",
+                    "errorType": type(lookup_error).__name__,
+                    "step": "account_lookup_or_creation"
+                }), 500
 
     except Exception as e:
         error_message = str(e)
-        print(f"CRITICAL ERROR during Google authentication: {error_message}")
-        print(f"Error: {e}")
-        return jsonify({"error": f"Server error: {error_message}"}), 500
+        error_type = type(e).__name__
+        print(f"[GOOGLE AUTH] ❌ CRITICAL TOP-LEVEL ERROR")
+        print(f"[GOOGLE AUTH] Error type: {error_type}")
+        print(f"[GOOGLE AUTH] Error message: {error_message}")
+        import traceback
+        print(f"[GOOGLE AUTH] Full traceback:")
+        print(traceback.format_exc())
+        
+        return jsonify({
+            "error": f"Server error: {error_message}",
+            "errorType": error_type,
+            "step": "google_auth_handler",
+            "details": "Check Vercel runtime logs for full traceback"
+        }), 500
 
 
 @app.route("/api/auth/signup", methods=["POST"])
