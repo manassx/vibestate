@@ -9,9 +9,7 @@ import os
 
 # Add backend directory to path so we can import app.py
 # backend/api/index.py -> go up one level to backend/
-backend_dir = os.path.dirname(os.path.abspath(__file__))  # Gets backend/api/
-backend_dir = os.path.dirname(backend_dir)  # Gets backend/
-sys.path.insert(0, backend_dir)
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 try:
     # Import the Flask app from app.py
@@ -31,15 +29,8 @@ except Exception as e:
         return jsonify({
             "error": "Backend failed to initialize",
             "details": str(e),
-            "path": backend_dir
+            "path": os.path.join(os.path.dirname(__file__), '..')
         }), 500
 
-# Vercel serverless function handler
-def handler(request, response):
-    """
-    Vercel serverless function entry point
-    """
-    return app(request, response)
-
-# For Vercel's Python runtime
-app = app
+# This is the handler Vercel calls
+handler = app
