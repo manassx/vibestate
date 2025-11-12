@@ -19,16 +19,15 @@ except Exception as e:
     from flask import Flask, jsonify
     app = Flask(__name__)
     
-    @app.route('/', defaults={'path': ''})
-    @app.route('/<path:path>')
-    def error_handler(path):
-        import traceback
+    @app.route('/')
+    @app.route('/api/')
+    @app.route('/api/<path:path>')
+    def handler(path=None):
         return jsonify({
-            "error": "Failed to import backend",
-            "type": type(e).__name__,
-            "message": str(e),
-            "traceback": traceback.format_exc().split('\n')
-        }), 500
+            "status": "alive",
+            "message": "Minimal Python function works",
+            "path": path or "root"
+        }), 200
 
 # Export for Vercel
 handler = app
