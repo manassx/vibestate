@@ -13,8 +13,26 @@ backend_dir = os.path.dirname(os.path.abspath(__file__))  # Gets backend/api/
 backend_dir = os.path.dirname(backend_dir)  # Gets backend/
 sys.path.insert(0, backend_dir)
 
-# Import the Flask app from app.py
-from app import app
+try:
+    # Import the Flask app from app.py
+    from app import app
+    print("✅ Successfully imported Flask app")
+except Exception as e:
+    print(f"❌ Failed to import Flask app: {e}")
+    import traceback
+    traceback.print_exc()
+    
+    # Create a minimal Flask app that returns the error
+    from flask import Flask, jsonify
+    app = Flask(__name__)
+    
+    @app.route('/api/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH'])
+    def error_handler(path):
+        return jsonify({
+            "error": "Backend failed to initialize",
+            "details": str(e),
+            "path": backend_dir
+        }), 500
 
 # Vercel serverless function handler
 def handler(request, response):
