@@ -52,3 +52,4 @@ dist/
 *.sql.backup
 *.db
 *.sqlite
+.vercel

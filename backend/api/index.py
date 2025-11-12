@@ -7,30 +7,31 @@ WITHOUT modifying the original Flask app.
 import sys
 import os
 
-# Add backend directory to path so we can import app.py
-# backend/api/index.py -> go up one level to backend/
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+# Ensure the parent `backend/` directory is in sys.path so we can import `app.py`
+backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
 
 try:
-    # Import the Flask app from app.py
-    from app import app
+    # Import the Flask WSGI app from `backend/app.py`
+    from app import app as flask_app
     print("✅ Successfully imported Flask app")
 except Exception as e:
-    print(f"❌ Failed to import Flask app: {e}")
+    # If import fails, surface the error via a minimal Flask app for diagnostics
     import traceback
     traceback.print_exc()
-    
-    # Create a minimal Flask app that returns the error
     from flask import Flask, jsonify
-    app = Flask(__name__)
-    
-    @app.route('/api/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH'])
+
+    flask_app = Flask(__name__)
+
+    @flask_app.route('/api/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH'])
     def error_handler(path):
         return jsonify({
             "error": "Backend failed to initialize",
             "details": str(e),
-            "path": os.path.join(os.path.dirname(__file__), '..')
+            "cwd": os.getcwd(),
+            "module_path": backend_dir
         }), 500
 
-# This is the handler Vercel calls
-handler = app
+# Expose the WSGI app for Vercel's Python runtime
+app = flask_app
