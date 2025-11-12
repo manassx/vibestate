@@ -16,18 +16,25 @@ except Exception as e:
     traceback.print_exc()
     
     # Create fallback app
-    from flask import Flask, jsonify
-    app = Flask(__name__)
-    
-    @app.route('/')
-    @app.route('/api/')
-    @app.route('/api/<path:path>')
-    def handler(path=None):
-        return jsonify({
+    def app(environ, start_response):
+        """Minimal WSGI app - no dependencies at all"""
+        import json
+        
+        status = '200 OK'
+        headers = [
+            ('Content-Type', 'application/json'),
+            ('Access-Control-Allow-Origin', '*')
+        ]
+        start_response(status, headers)
+        
+        response = {
             "status": "alive",
-            "message": "Minimal Python function works",
-            "path": path or "root"
-        }), 200
+            "message": "Raw WSGI works - no Flask",
+            "path": environ.get('PATH_INFO', '/'),
+            "method": environ.get('REQUEST_METHOD', 'GET')
+        }
+        
+        return [json.dumps(response).encode('utf-8')]
 
 # Export for Vercel
 handler = app
