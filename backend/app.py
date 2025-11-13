@@ -1759,5 +1759,7 @@ def internal_error(e):
 
 
 if __name__ == "__main__":
-    # Run the app on port 8000 to match frontend expectations
-    app.run(host='0.0.0.0', port=8000, debug=True)
+    # Get port from environment variable (Render sets this automatically)
+    port = int(os.environ.get('PORT', 8000))
+    # Run the app on the port Render provides
+    app.run(host='0.0.0.0', port=port, debug=False)
