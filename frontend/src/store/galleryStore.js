@@ -1,6 +1,7 @@
 import {create} from 'zustand';
 import {get as apiGet, post, patch, del} from '../utils/api';
 import {API_ENDPOINTS} from '../utils/constants';
+import {uploadImagesInParallel, deleteImagesFromStorage} from '../utils/supabaseUpload';
 
 const useGalleryStore = create((set, get) => ({
     // State
@@ -108,37 +109,100 @@ const useGalleryStore = create((set, get) => ({
     uploadImages: async (galleryId, files) => {
         set({uploadProgress: 0, error: null});
         try {
-            // Upload files ONE AT A TIME to avoid Vercel's 4.5MB body size limit
-            let totalUploaded = 0;
-            const uploadedImages = [];
+            // Get user ID from auth storage
+            const authStorage = localStorage.getItem('auth-storage');
+            if (!authStorage) {
+                throw new Error('Not authenticated');
+            }
+            const userId = JSON.parse(authStorage).state.user.id;
 
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                const formData = new FormData();
-                formData.append('images', file);
+            console.log(`📸 [Gallery Store] Starting upload of ${files.length} images to gallery ${galleryId}`);
 
-                // Upload single file
-                const result = await post(API_ENDPOINTS.GALLERIES.UPLOAD(galleryId), formData);
+            // STEP 1: Upload ALL images directly to Supabase (bypasses Vercel 4.5MB limit!)
+            const uploadResults = await uploadImagesInParallel(
+                files,
+                userId,
+                galleryId,
+                (completed, total) => {
+                    // Update progress (0-70% for upload phase)
+                    const progress = Math.round((completed / total) * 70);
+                    set({uploadProgress: progress});
+                    console.log(`📊 [Gallery Store] Upload progress: ${completed}/${total} (${progress}%)`);
+                }
+            );
 
-                uploadedImages.push(...(result.images || []));
-                totalUploaded += result.uploadedCount || 0;
+            console.log(`✅ [Gallery Store] Uploaded ${uploadResults.length}/${files.length} images to storage`);
 
-                // Update progress
-                const progress = Math.round(((i + 1) / files.length) * 100);
-                set({uploadProgress: progress});
+            if (uploadResults.length === 0) {
+                throw new Error('All image uploads failed');
+            }
+
+            // STEP 2: Register each image in the database (tiny metadata payloads < 1KB each)
+            const registeredImages = [];
+            const failedRegistrations = [];
+
+            for (let i = 0; i < uploadResults.length; i++) {
+                const result = uploadResults[i];
+
+                try {
+                    console.log(`📝 [Gallery Store] Registering ${i + 1}/${uploadResults.length}: ${result.fileName}`);
+
+                    // Send only metadata to backend (NOT the file!)
+                    const metadata = {
+                        url: result.url,
+                        fileName: result.fileName,
+                        size: result.size,
+                        storageKey: result.path,
+                        width: result.width,
+                        height: result.height
+                    };
+
+                    // This request is tiny (< 1KB) - won't hit 4.5MB limit!
+                    const response = await post(
+                        API_ENDPOINTS.GALLERIES.REGISTER_IMAGE(galleryId),
+                        metadata
+                    );
+
+                    registeredImages.push(response.image);
+
+                    // Update progress (70-100% for registration phase)
+                    const progress = 70 + Math.round(((i + 1) / uploadResults.length) * 30);
+                    set({uploadProgress: progress});
+
+                } catch (error) {
+                    console.error(`❌ [Gallery Store] Failed to register ${result.fileName}:`, error);
+                    failedRegistrations.push(result);
+                }
+            }
+
+            console.log(`✅ [Gallery Store] Successfully registered ${registeredImages.length}/${uploadResults.length} images`);
+
+            // STEP 3: Cleanup orphaned files (uploaded but not registered)
+            if (failedRegistrations.length > 0) {
+                console.warn(`🗑️ [Gallery Store] Cleaning up ${failedRegistrations.length} orphaned files...`);
+                const pathsToDelete = failedRegistrations.map(f => f.path);
+                await deleteImagesFromStorage(pathsToDelete);
             }
 
             // Update gallery image count locally
             get().updateGalleryLocal(galleryId, {
-                image_count: totalUploaded,
+                image_count: registeredImages.length,
                 status: 'processing'
             });
 
+            console.log(`🎉 [Gallery Store] Upload Summary:
+  📤 Total files: ${files.length}
+  ✅ Uploaded to storage: ${uploadResults.length}
+  ✅ Registered in database: ${registeredImages.length}
+  ${failedRegistrations.length > 0 ? `❌ Failed: ${failedRegistrations.length}` : ''}
+            `);
+
             return {
-                uploadedCount: totalUploaded,
-                images: uploadedImages
+                uploadedCount: registeredImages.length,
+                images: registeredImages
             };
         } catch (error) {
+            console.error('❌ [Gallery Store] Upload failed:', error);
             set({error: error.message, uploadProgress: 0});
             throw error;
         }

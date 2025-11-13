@@ -15,6 +15,7 @@ export const API_ENDPOINTS = {
         UPDATE: (id) => `/api/galleries/${id}`,
         DELETE: (id) => `/api/galleries/${id}`,
         UPLOAD: (id) => `/api/galleries/${id}/upload`,
+        REGISTER_IMAGE: (id) => `/api/galleries/${id}/register-image`,
         ANALYZE: (id) => `/api/galleries/${id}/analyze`,
     },
     PUBLIC: {
