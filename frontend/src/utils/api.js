@@ -13,11 +13,9 @@ let isHandlingAuthFailure = false;
  */
 export const apiRequest = async (endpoint, options = {}, isRetry = false) => {
     // Build full URL
-    const url = endpoint.startsWith('http')
-        ? endpoint
-        : `${API_BASE_URL}${endpoint}`;
+    const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
 
-    // Get token from localStorage if it exists
+    // Get token from localStorage
     const authStorage = localStorage.getItem('auth-storage');
     let token = null;
 
@@ -26,7 +24,7 @@ export const apiRequest = async (endpoint, options = {}, isRetry = false) => {
             const parsed = JSON.parse(authStorage);
             token = parsed.state?.token;
         } catch (e) {
-            // console.error('Failed to parse auth storage:', e);
+            // Silent fail - not critical
         }
     }
 
@@ -45,29 +43,9 @@ export const apiRequest = async (endpoint, options = {}, isRetry = false) => {
         headers['Content-Type'] = 'application/json';
     }
 
-    // Detect if this is a large upload (FormData)
+    // Determine timeout based on request type
     const isUpload = options.body instanceof FormData;
-    const isMobile = window.innerWidth <= 768 || 'ontouchstart' in window;
-
-    // Set appropriate timeout: 10 minutes for uploads on mobile (slow networks), 3 minutes for desktop uploads, 2 minutes for other requests
-    const timeoutMs = isUpload ? (isMobile ? 600000 : 180000) : 120000;
-
-    // Log mobile uploads for debugging
-    if (isUpload && isMobile) {
-        console.log(`[Mobile Upload] Starting upload to ${endpoint}`);
-        console.log(`[Mobile Upload] Timeout set to: ${timeoutMs / 1000} seconds (${timeoutMs / 60000} minutes)`);
-
-        // Calculate FormData size
-        if (options.body.entries) {
-            let totalSize = 0;
-            for (let pair of options.body.entries()) {
-                if (pair[1] instanceof File) {
-                    totalSize += pair[1].size;
-                }
-            }
-            console.log(`[Mobile Upload] Total upload size: ${(totalSize / 1024 / 1024).toFixed(2)} MB`);
-        }
-    }
+    const timeoutMs = isUpload ? 180000 : 30000; // 3min for uploads, 30sec for API calls
 
     try {
         // Create abort controller for timeout
@@ -83,31 +61,21 @@ export const apiRequest = async (endpoint, options = {}, isRetry = false) => {
 
         clearTimeout(timeoutId);
 
-        // Log mobile upload success
-        if (isUpload && isMobile) {
-            console.log(`[Mobile Upload] Upload successful to ${endpoint}`);
-        }
-
         // Handle errors
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
 
             // Handle 401 Unauthorized - token expired or invalid
             if (response.status === 401) {
-                // Retry once before giving up (could be transient network error)
+                // Retry once before giving up
                 if (!isRetry) {
-                    // console.log('[INFO] 401 error, retrying once...');
-                    await new Promise(resolve => setTimeout(resolve, 500));
+                    await new Promise(resolve => setTimeout(resolve, 300));
                     return apiRequest(endpoint, options, true);
                 }
 
                 // Only handle auth failure once
                 if (!isHandlingAuthFailure) {
                     isHandlingAuthFailure = true;
-
-                    // console.warn('Authentication failed - token expired or invalid');
-
-                    // Show user-friendly message (only once)
                     toast.error('Your session has expired. Please log in again.', {
                         duration: 4000,
                         id: 'auth-expired'
@@ -126,10 +94,9 @@ export const apiRequest = async (endpoint, options = {}, isRetry = false) => {
                 }
             }
 
-            // Handle other errors with user-friendly messages
+            // Get user-friendly error message
             let errorMessage = errorData.message || errorData.error;
 
-            // Provide user-friendly error messages
             if (!errorMessage) {
                 switch (response.status) {
                     case 400:
@@ -158,33 +125,23 @@ export const apiRequest = async (endpoint, options = {}, isRetry = false) => {
         // Return JSON response
         return response.json();
     } catch (error) {
-        // Log mobile upload error
-        if (isUpload && isMobile) {
-            console.error(`[Mobile Upload] Error during upload to ${endpoint}:`, error);
-        }
-
         // Handle abort/timeout errors
         if (error.name === 'AbortError') {
             if (isUpload) {
-                throw new Error('Upload is taking longer than expected. Please check your connection and try again with fewer images.');
+                throw new Error('Upload is taking longer than expected. Please check your connection and try again.');
             }
             throw new Error('Request timeout. Please check your connection and try again.');
         }
 
-        // Handle network errors
+        // Handle network errors with retry
         if (error.name === 'TypeError' && error.message.includes('fetch')) {
-            // Network error - retry once if not already retried and not an upload
             if (!isRetry && !isUpload) {
-                // console.log('[INFO] Network error, retrying once...');
-                await new Promise(resolve => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, 300));
                 return apiRequest(endpoint, options, true);
-            }
-
-            if (isUpload) {
-                throw new Error('Network error during upload. Please check your connection and try again.');
             }
             throw new Error('Network error. Please check your connection and try again.');
         }
+
         throw error;
     }
 };

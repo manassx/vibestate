@@ -39,13 +39,13 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 admin_supabase: Client = supabase
 
 # Basic startup status message (critical environment vars)
-print(f"Supabase URL: {SUPABASE_URL}")
-print(f"Supabase Key starts with: {SUPABASE_KEY[:20]}... (length: {len(SUPABASE_KEY)})")
+print(f"Supabase URL configured: {bool(SUPABASE_URL)}")
+print(f"Supabase Key configured: {bool(SUPABASE_KEY)}")
 
 if "service_role" in SUPABASE_KEY or SUPABASE_KEY.startswith("eyJ"):
-    print("[INFO] Using JWT key (likely service_role): Admin operations enabled.")
+    print("[INFO] Using service_role key - Admin operations enabled.")
 else:
-    print("[WARNING] SUPABASE_KEY may be an anon key. Admin operations will NOT work unless you use your service_role key.")
+    print("[WARNING] SUPABASE_KEY may be anon key - Admin operations may not work.")
 
 # Configuration
 STORAGE_BUCKET = "gallery-images"
@@ -1318,40 +1318,37 @@ def register_uploaded_image(gallery_id):
     user = get_user_from_token()
     if not user:
         return jsonify({"error": "Unauthorized"}), 401
-    
+
     try:
         # Verify gallery ownership
         gallery_result = supabase.table('galleries').select('*').eq('id', gallery_id).eq('user_id', user.id).execute()
-        
         if not gallery_result.data:
             return jsonify({"error": "Gallery not found"}), 404
-        
+
         gallery = gallery_result.data[0]
-        
+
         # Get metadata from request (tiny JSON payload)
         data = request.get_json()
         if not data:
             return jsonify({"error": "Missing JSON data"}), 400
-        
+
         url = data.get('url')
         storage_key = data.get('storageKey')
         file_name = data.get('fileName')
         file_size = data.get('size')
         width = data.get('width')
         height = data.get('height')
-        
+
         if not url or not storage_key:
             return jsonify({"error": "Missing required fields (url, storageKey)"}), 400
-        
-        print(f"📝 [Register Image] Gallery: {gallery_id}, File: {file_name}, Size: {file_size} bytes")
-        
+
         # Use same URL for thumbnail (Supabase can do transforms later)
         thumbnail_url = url
-        
+
         # Get current max order index
         max_order_result = supabase.table('images').select('order_index').eq('gallery_id', gallery_id).order('order_index', desc=True).limit(1).execute()
         current_max_order = max_order_result.data[0]['order_index'] if max_order_result.data else -1
-        
+
         # Prepare metadata
         metadata = {
             "width": width,
@@ -1360,7 +1357,7 @@ def register_uploaded_image(gallery_id):
             "format": file_name.rsplit('.', 1)[1].lower() if '.' in file_name else 'unknown',
             "storage_key": storage_key
         }
-        
+
         # Save image record to database
         image_data = {
             "gallery_id": gallery_id,
@@ -1369,28 +1366,25 @@ def register_uploaded_image(gallery_id):
             "metadata": metadata,
             "order_index": current_max_order + 1
         }
-        
+
         image_result = supabase.table('images').insert(image_data).execute()
-        
         if not image_result.data:
             return jsonify({"error": "Failed to save image record"}), 500
-        
-        # Update gallery image count
+
+        # Update gallery image count efficiently
         new_count = gallery['image_count'] + 1
         supabase.table('galleries').update({
             "image_count": new_count,
             "status": "processing" if new_count > 0 else gallery['status']
         }).eq('id', gallery_id).execute()
-        
-        print(f"✅ [Register Image] Success! Total images in gallery: {new_count}")
-        
+
         return jsonify({
             "success": True,
             "image": image_result.data[0]
         }), 200
-    
+
     except Exception as e:
-        print(f"❌ [Register Image] Error: {e}")
+        print(f"Register image error: {e}")
         return jsonify({"error": str(e)}), 500
 
 

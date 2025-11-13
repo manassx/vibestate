@@ -8,8 +8,7 @@ const supabase = createClient(
 
 /**
  * Upload multiple images in parallel to Supabase Storage
- * This bypasses Vercel's 4.5MB serverless function limit
- * Images go directly from browser to Supabase
+ * Bypasses Vercel's 4.5MB serverless function limit by uploading directly from browser
  *
  * @param {File[]} files - Array of image files to upload
  * @param {string} userId - User ID for folder organization
@@ -18,8 +17,6 @@ const supabase = createClient(
  * @returns {Promise<Array>} Array of upload results with URLs and metadata
  */
 export async function uploadImagesInParallel(files, userId, galleryId, onProgress) {
-    console.log(`🚀 [Direct Upload] Starting parallel upload of ${files.length} images`);
-
     // Create upload promises for parallel execution
     const uploadPromises = files.map(async (file, index) => {
         try {
@@ -27,9 +24,7 @@ export async function uploadImagesInParallel(files, userId, galleryId, onProgres
             const fileName = `${crypto.randomUUID()}.${fileExt}`;
             const filePath = `${userId}/${galleryId}/${fileName}`;
 
-            console.log(`📤 [Direct Upload ${index + 1}/${files.length}] Uploading: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
-
-            // Upload directly to Supabase Storage (no Vercel involved!)
+            // Upload directly to Supabase Storage
             const {data, error} = await supabase.storage
                 .from('gallery-images')
                 .upload(filePath, file, {
@@ -38,7 +33,6 @@ export async function uploadImagesInParallel(files, userId, galleryId, onProgres
                 });
 
             if (error) {
-                console.error(`❌ [Direct Upload] Failed: ${file.name}`, error);
                 throw error;
             }
 
@@ -46,8 +40,6 @@ export async function uploadImagesInParallel(files, userId, galleryId, onProgres
             const {data: {publicUrl}} = supabase.storage
                 .from('gallery-images')
                 .getPublicUrl(filePath);
-
-            console.log(`✅ [Direct Upload ${index + 1}/${files.length}] Success: ${file.name}`);
 
             // Get image dimensions
             const dimensions = await getImageDimensions(file);
@@ -67,7 +59,6 @@ export async function uploadImagesInParallel(files, userId, galleryId, onProgres
                 success: true
             };
         } catch (error) {
-            console.error(`❌ [Direct Upload] Critical error for ${file.name}:`, error);
             return {
                 fileName: file.name,
                 error: error.message,
@@ -76,7 +67,7 @@ export async function uploadImagesInParallel(files, userId, galleryId, onProgres
         }
     });
 
-    // Wait for ALL uploads to complete (parallel execution)
+    // Wait for ALL uploads to complete in parallel
     const results = await Promise.all(uploadPromises);
 
     // Filter out failed uploads
@@ -92,8 +83,7 @@ export async function uploadImagesInParallel(files, userId, galleryId, onProgres
 }
 
 /**
- * Extract image dimensions from a file
- * Used to get width/height before uploading to backend
+ * Extract image dimensions from a file efficiently
  *
  * @param {File} file - Image file
  * @returns {Promise<{width: number, height: number}>} Image dimensions
@@ -147,8 +137,7 @@ export async function deleteImageFromStorage(filePath) {
 }
 
 /**
- * Delete multiple images from Supabase Storage
- * Used for bulk cleanup operations
+ * Delete multiple images from Supabase Storage efficiently
  *
  * @param {string[]} filePaths - Array of storage paths
  * @returns {Promise<number>} Number of successfully deleted files
@@ -159,19 +148,18 @@ export async function deleteImagesFromStorage(filePaths) {
     }
 
     try {
-        const {data, error} = await supabase.storage
+        const {error} = await supabase.storage
             .from('gallery-images')
             .remove(filePaths);
 
         if (error) {
-            console.error(`❌ [Storage Cleanup] Bulk delete failed:`, error);
+            console.error('Storage cleanup failed:', error);
             return 0;
         }
 
-        console.log(`🗑️ [Storage Cleanup] Deleted ${filePaths.length} files`);
         return filePaths.length;
     } catch (error) {
-        console.error(`❌ [Storage Cleanup] Error:`, error);
+        console.error('Storage cleanup error:', error);
         return 0;
     }
 }
