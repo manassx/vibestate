@@ -7,6 +7,9 @@ from supabase import create_client, Client
 from dotenv import load_dotenv
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
+import threading
+import time
+import requests
 try:
     from PIL import Image  # Optional: may fail on serverless without native libs
     PIL_AVAILABLE = True
@@ -55,6 +58,33 @@ THUMBNAIL_SIZE = (400, 400)
 
 
 # ==================== Utility Functions ====================
+
+# Add a health check endpoint
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Simple health check to keep service warm"""
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.utcnow().isoformat(),
+        'service': 'cursorgallery-backend'
+    }), 200
+
+# Add keep-warm thread to prevent cold starts on Render
+def keep_warm():
+    """Ping self every 10 minutes to prevent cold starts"""
+    while True:
+        try:
+            time.sleep(600)  # Wait 10 minutes
+            # Only ping if we're in production (not localhost)
+            if not app.debug:
+                requests.get('https://cursorgallery-backend.onrender.com/health', timeout=5)
+        except:
+            pass  # Ignore errors
+
+# Start keep-warm thread in production
+if not app.debug:
+    warm_thread = threading.Thread(target=keep_warm, daemon=True)
+    warm_thread.start()
 
 def get_user_from_token():
     """Extract user from Authorization header with improved error handling"""

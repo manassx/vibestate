@@ -7,6 +7,14 @@ import axios from 'axios'; // Import axios
 // Your Flask backend URL
 const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth`;
 
+// Configure axios with longer timeout for cold starts
+const api = axios.create({
+    timeout: 60000, // 60 seconds timeout for cold starts
+    headers: {
+        'Content-Type': 'application/json',
+    },
+});
+
 // Define the initial (logged-out) state
 const initialState = {
     user: null,
@@ -28,8 +36,8 @@ const useAuthStore = create(
             login: async (email, password) => {
                 set({isLoading: true, error: null});
                 try {
-                    // 1. Call your Flask API
-                    const response = await axios.post(`${API_URL}/login`, {
+                    // 1. Call your Flask API with extended timeout
+                    const response = await api.post(`${API_URL}/login`, {
                         email,
                         password,
                     });
@@ -48,8 +56,14 @@ const useAuthStore = create(
                     return response.data;
 
                 } catch (error) {
-                    // 3. Handle errors (e.g., 401 Invalid Credentials)
-                    const errorMessage = error.response?.data?.error || error.message || 'Login failed';
+                    // 3. Handle errors with better cold start messaging
+                    let errorMessage;
+
+                    if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+                        errorMessage = 'Server is starting up, please try again in a moment...';
+                    } else {
+                        errorMessage = error.response?.data?.error || error.message || 'Login failed';
+                    }
 
                     set({
                         ...initialState, // Reset to logged-out state on failure
@@ -69,7 +83,7 @@ const useAuthStore = create(
             signup: async (name, email, password) => {
                 set({isLoading: true, error: null});
                 try {
-                    const response = await axios.post(`${API_URL}/signup`, {
+                    const response = await api.post(`${API_URL}/signup`, {
                         name,
                         email,
                         password,
@@ -94,7 +108,14 @@ const useAuthStore = create(
                     return response.data; // Return data for component to handle
 
                 } catch (error) {
-                    const errorMessage = error.response?.data?.error || error.message || 'Signup failed';
+                    let errorMessage;
+
+                    if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+                        errorMessage = 'Server is starting up, please try again in a moment...';
+                    } else {
+                        errorMessage = error.response?.data?.error || error.message || 'Signup failed';
+                    }
+
                     set({isLoading: false, error: errorMessage});
                     throw new Error(errorMessage);
                 }
