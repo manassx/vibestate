@@ -131,37 +131,60 @@ const useGalleryStore = create((set, get) => ({
                 throw new Error('All image uploads failed');
             }
 
-            // STEP 2: Register ALL images in parallel (MUCH FASTER!)
-            const registrationPromises = uploadResults.map(result => {
-                const metadata = {
-                    url: result.url,
-                    fileName: result.fileName,
-                    size: result.size,
-                    storageKey: result.path,
-                    width: result.width,
-                    height: result.height
-                };
+            // STEP 2: Register images in BATCHES to prevent server overload
+            const successfulRegistrations = [];
+            const batchSize = 3; // Process 3 at a time to avoid overwhelming Render
 
-                return post(API_ENDPOINTS.GALLERIES.REGISTER_IMAGE(galleryId), metadata)
-                    .then(response => response.image)
-                    .catch(error => {
-                        console.error(`Failed to register ${result.fileName}:`, error);
-                        return null; // Return null for failed registrations
-                    });
-            });
+            for (let i = 0; i < uploadResults.length; i += batchSize) {
+                const batch = uploadResults.slice(i, i + batchSize);
 
-            // Wait for all registrations to complete in parallel
-            const registrationResults = await Promise.all(registrationPromises);
+                // Process this batch in parallel
+                const batchPromises = batch.map(result => {
+                    const metadata = {
+                        url: result.url,
+                        fileName: result.fileName,
+                        size: result.size,
+                        storageKey: result.path,
+                        width: result.width,
+                        height: result.height
+                    };
 
-            // Filter out failed registrations
-            const successfulRegistrations = registrationResults.filter(result => result !== null);
-            const failedCount = registrationResults.length - successfulRegistrations.length;
+                    return post(API_ENDPOINTS.GALLERIES.REGISTER_IMAGE(galleryId), metadata)
+                        .then(response => response.image)
+                        .catch(error => {
+                            console.error(`Failed to register ${result.fileName}:`, error);
+                            return null;
+                        });
+                });
+
+                // Wait for this batch to complete
+                const batchResults = await Promise.all(batchPromises);
+
+                // Add successful registrations
+                batchResults.forEach(result => {
+                    if (result !== null) {
+                        successfulRegistrations.push(result);
+                    }
+                });
+
+                // Update progress (70-100% for registration phase)
+                const progress = 70 + Math.round((Math.min(i + batchSize, uploadResults.length) / uploadResults.length) * 30);
+                set({uploadProgress: progress});
+
+                // Small delay between batches to be nice to the server
+                if (i + batchSize < uploadResults.length) {
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                }
+            }
 
             set({uploadProgress: 100});
 
             // STEP 3: Cleanup orphaned files if any registrations failed
+            const failedCount = uploadResults.length - successfulRegistrations.length;
             if (failedCount > 0) {
-                const failedUploads = uploadResults.filter((_, index) => registrationResults[index] === null);
+                const failedUploads = uploadResults.filter(result =>
+                    !successfulRegistrations.some(reg => reg.url === result.url)
+                );
                 const pathsToDelete = failedUploads.map(f => f.path);
                 await deleteImagesFromStorage(pathsToDelete);
             }

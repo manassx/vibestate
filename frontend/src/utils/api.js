@@ -94,6 +94,16 @@ export const apiRequest = async (endpoint, options = {}, isRetry = false) => {
                 }
             }
 
+            // Handle 500 errors - server overload (common on Render free tier)
+            if (response.status === 500 || response.status === 502 || response.status === 503) {
+                // Retry once for server errors with longer delay
+                if (!isRetry) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    return apiRequest(endpoint, options, true);
+                }
+                throw new Error('Server temporarily unavailable. Please try again.');
+            }
+
             // Get user-friendly error message
             let errorMessage = errorData.message || errorData.error;
 
@@ -140,6 +150,16 @@ export const apiRequest = async (endpoint, options = {}, isRetry = false) => {
                 return apiRequest(endpoint, options, true);
             }
             throw new Error('Network error. Please check your connection and try again.');
+        }
+
+        // Handle server disconnection errors
+        if (error.message.includes('Load failed') || error.message.includes('disconnected') ||
+            error.message.includes('connection') || error.message.includes('ERR_NETWORK')) {
+            if (!isRetry) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                return apiRequest(endpoint, options, true);
+            }
+            throw new Error('Server disconnected. Please try again.');
         }
 
         throw error;
