@@ -131,15 +131,13 @@ const useGalleryStore = create((set, get) => ({
                 throw new Error('All image uploads failed');
             }
 
-            // STEP 2: Register images in BATCHES to prevent server overload
+            // STEP 2: Register images ONE BY ONE to prevent server overload
             const successfulRegistrations = [];
-            const batchSize = 3; // Process 3 at a time to avoid overwhelming Render
 
-            for (let i = 0; i < uploadResults.length; i += batchSize) {
-                const batch = uploadResults.slice(i, i + batchSize);
+            for (let i = 0; i < uploadResults.length; i++) {
+                const result = uploadResults[i];
 
-                // Process this batch in parallel
-                const batchPromises = batch.map(result => {
+                try {
                     const metadata = {
                         url: result.url,
                         fileName: result.fileName,
@@ -149,31 +147,21 @@ const useGalleryStore = create((set, get) => ({
                         height: result.height
                     };
 
-                    return post(API_ENDPOINTS.GALLERIES.REGISTER_IMAGE(galleryId), metadata)
-                        .then(response => response.image)
-                        .catch(error => {
-                            console.error(`Failed to register ${result.fileName}:`, error);
-                            return null;
-                        });
-                });
+                    const response = await post(API_ENDPOINTS.GALLERIES.REGISTER_IMAGE(galleryId), metadata);
+                    successfulRegistrations.push(response.image);
 
-                // Wait for this batch to complete
-                const batchResults = await Promise.all(batchPromises);
+                    // Update progress (70-100% for registration phase)
+                    const progress = 70 + Math.round(((i + 1) / uploadResults.length) * 30);
+                    set({uploadProgress: progress});
 
-                // Add successful registrations
-                batchResults.forEach(result => {
-                    if (result !== null) {
-                        successfulRegistrations.push(result);
+                    // Small delay between each registration to be gentle on Render
+                    if (i < uploadResults.length - 1) {
+                        await new Promise(resolve => setTimeout(resolve, 300));
                     }
-                });
 
-                // Update progress (70-100% for registration phase)
-                const progress = 70 + Math.round((Math.min(i + batchSize, uploadResults.length) / uploadResults.length) * 30);
-                set({uploadProgress: progress});
-
-                // Small delay between batches to be nice to the server
-                if (i + batchSize < uploadResults.length) {
-                    await new Promise(resolve => setTimeout(resolve, 200));
+                } catch (error) {
+                    console.error(`Failed to register ${result.fileName}:`, error);
+                    // Continue with next image instead of failing completely
                 }
             }
 
